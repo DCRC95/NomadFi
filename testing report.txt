@@ -1,0 +1,87 @@
+Testing Report for DeFi Yield Aggregator Project
+=================================================
+
+This report logs each test step performed on the smart contracts in the project, including the description and reasoning for each test. Each entry is sequentially numbered for clarity.
+
+Test 1: Basic Deployment and Ownership
+--------------------------------------
+**Description:**
+Deploy MockERC20, MockYieldStrategy, and YieldAggregator contracts to the Hardhat Network. Verify that the contracts are deployed successfully, that MockERC20 can mint tokens to user accounts, and that the YieldAggregator's owner is set to the deployer.
+
+**Reasoning:**
+This test ensures that the core contracts can be deployed without errors, that the token contract's minting functionality works as expected, and that the access control for the aggregator is correctly initialised. This forms the foundation for all further contract interactions and tests.
+
+**Result:**
+All contracts were deployed successfully. MockERC20 minted 1000 tokens each to user1 and user2. YieldAggregator's owner was confirmed to be the deployer address. The test passed, confirming correct initialisation and basic functionality.
+
+Test 2: Unit Tests for MockERC20.sol
+------------------------------------
+**Description:**
+Unit tests for the MockERC20 contract, covering:
+- Verifying total supply and initial balance of the deployer.
+- Testing the mint function: tokens are minted to the caller, total supply increases, and the correct event is emitted.
+- Testing the transfer function: tokens are transferred, balances update, and the Transfer event is emitted.
+- Testing approve and transferFrom: allowance mechanism works correctly and Approval event is emitted.
+
+**Reasoning:**
+These tests ensure that the ERC20 token implementation is correct and that all standard ERC20 features (minting, transferring, approving, and transferring via allowance) work as expected. This is critical for any DeFi protocol relying on token interactions.
+
+**Result:**
+[To be filled after test execution]
+
+Test 3: Unit Tests for MockYieldStrategy.sol
+--------------------------------------------
+**Description:**
+Unit tests for the MockYieldStrategy contract, covering:
+- Verifying the mockToken address is set correctly in the constructor.
+- Testing getAPY(): returns the expected hardcoded value.
+- Testing deposit(amount):
+  - MockYieldStrategy receives tokens.
+  - deposits mapping for the user is updated correctly.
+  - Deposit event is emitted.
+  - User must approve MockYieldStrategy to spend tokens before deposit.
+- Testing withdraw(amount):
+  - MockYieldStrategy sends tokens back to the user.
+  - deposits mapping for the user is decreased correctly.
+  - Withdraw event is emitted.
+- Testing for insufficient balance reverts.
+
+**Reasoning:**
+These tests ensure that the mock yield strategy contract correctly simulates deposit and withdrawal flows, updates internal accounting, and emits the appropriate events. This is essential for validating the integration between the aggregator and yield strategies, as well as for frontend and integration testing.
+
+**Result:**
+[To be filled after test execution] 
+
+Test 4: Unit Tests for YieldAggregator.sol (Core Functions & Access Control)
+--------------------------------------------------------------------------
+**Description:**
+Unit tests for the YieldAggregator contract, covering:
+- Owner & Access Control: verify owner is set, onlyOwner modifier on addStrategy/removeStrategy, and event emission.
+- addStrategy: successful addition, mapping/array update, event emission, and onlyOwner enforcement.
+- removeStrategy: onlyOwner enforcement, isActive status change, event emission.
+- getStrategyInfo: correct details for existing and non-existent IDs.
+- Conceptual Deposit/Withdrawal (Local Strategy): deposit/withdraw logic, userDeposits mapping, event emission, isActive check, insufficient deposit revert, and getUserDeposit correctness.
+
+**Reasoning:**
+These tests ensure the aggregator's core registration, access control, and conceptual deposit/withdrawal logic work as intended, enforcing security and correct state updates. This is critical for the aggregator's role as the central registry and accounting contract in the MVP.
+
+**Result:**
+[To be filled after test execution] 
+
+**Note:**
+To facilitate reliable testing and frontend access, a helper function `getAllStrategyIds()` was added to `YieldAggregator.sol`. This function returns the full array of registered strategy IDs. The test logic was updated to use this function when verifying that a strategy was successfully registered and included in the aggregator's state. 
+
+Test 5: Integration Tests for Cross-Chain Awareness (Simulated)
+--------------------------------------------------------------
+**Description:**
+Integration tests for the YieldAggregator contract's cross-chain awareness feature. These tests:
+- Register both a local MockYieldStrategy (with the Hardhat Network's chainId) and a simulated remote strategy (with Sepolia's chainId and a placeholder address).
+- Verify getStrategyInfo returns correct details for both strategies.
+- Test conceptual deposit and withdraw for the simulated remote strategy, ensuring userDeposits mapping is updated and events are emitted.
+- Emphasize in comments and test descriptions that these tests validate chainId distinction and conceptual cross-chain awareness, not actual bridging or remote contract deployment.
+
+**Reasoning:**
+These tests are critical for demonstrating the aggregator's ability to distinguish and record user interactions with strategies on different chains, a core feature of the MVP's cross-chain simulation approach.
+
+**Result:**
+[To be filled after test execution] 
