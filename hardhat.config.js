@@ -9,12 +9,12 @@ module.exports = {
   networks: {
     hardhat: {},
     mumbai: {
-      url: process.env.POLYGONSCAN_RPC_URL || "https://polygon-mumbai.infura.io/v3/YOUR_INFURA_PROJECT_ID", // Polygon Mumbai RPC URL
+      url: process.env.POLYGONSCAN_RPC_URL || "https://polygon-amoy.infura.io/v3/b3b18fff97b6463ca552f9334d7fe15f", // Polygon Amoy RPC URL
       accounts: process.env.PRIVATE_KEY ? [process.env.PRIVATE_KEY] : [],
       chainId: 80001,
     },
     sepolia: {
-      url: process.env.ETHEREUM_SEPOLIA_RPC_URL || "https://sepolia.infura.io/v3/YOUR_INFURA_PROJECT_ID", // Ethereum Sepolia RPC URL
+      url: process.env.ETHEREUM_SEPOLIA_RPC_URL || "https://sepolia.infura.io/v3/b3b18fff97b6463ca552f9334d7fe15f", // Ethereum Sepolia RPC URL
       accounts: process.env.PRIVATE_KEY ? [process.env.PRIVATE_KEY] : [],
       chainId: 11155111,
     },

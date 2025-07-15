@@ -1,0 +1,2 @@
+// This file is now intentionally left minimal to avoid importing client-only code in server/shared files.
+// Export only types, constants, or utility functions that do not depend on browser APIs or cause side effects. 
