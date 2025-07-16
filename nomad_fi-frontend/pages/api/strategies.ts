@@ -8,23 +8,22 @@ const YIELD_AGGREGATOR_ABI = (YIELD_AGGREGATOR_ABI_JSON as any).abi || YIELD_AGG
 // --- Chain Configurations ---
 const CHAINS = [
   {
-    name: 'Hardhat Network',
-    chainId: 31337,
-    rpcUrl: 'http://127.0.0.1:8545',
-    aggregatorAddress: '0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0', // Provided Hardhat address
+    name: 'Polygon Amoy',
+    chainId: 80002,
+    rpcUrl: process.env.NEXT_PUBLIC_AMOY_RPC_URL || 'https://rpc-amoy.polygon.technology',
+    aggregatorAddress: '0xf8BCC457c406a30e00340f4b78436f21a57073BA',
+    mockERC20Address: '0xd0B01c1ce87508757FEB41C5D8b2D117a4f4c283',
+    mockYieldStrategyAddress: '0xEcC14061E9c3aa3cc1102d668c1b9e8c3da19392',
   },
   {
     name: 'Ethereum Sepolia',
     chainId: 11155111,
     rpcUrl: process.env.NEXT_PUBLIC_SEPOLIA_RPC_URL || 'https://ethereum-sepolia.publicnode.com',
-    aggregatorAddress: '0x000000000000000000000000000000000000dEaD',
+    aggregatorAddress: '', // No YieldAggregator on Sepolia
+    mockERC20Address: '0x8b80b737c954d5fB43B390C083d72E210248ec64',
+    mockYieldStrategyAddress: '0x2B3e7E84e4be132EB85c0180148c62fbDf6a7DCA',
   },
-  {
-    name: 'Polygon Amoy',
-    chainId: 80002, // Amoy testnet chainId
-    rpcUrl: process.env.NEXT_PUBLIC_AMOY_RPC_URL || 'https://rpc-amoy.polygon.technology',
-    aggregatorAddress: '', // Fill in if/when you deploy
-  },
+  // Hardhat removed for demo
 ];
 
 // Helper to safely serialize BigInt values in strategy info

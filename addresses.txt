@@ -1,0 +1,11 @@
+SEPOLIA:
+MockERC20 deployed to: 0x8b80b737c954d5fB43B390C083d72E210248ec64
+MockYieldStrategy deployed to: 0x2B3e7E84e4be132EB85c0180148c62fbDf6a7DCA
+Sepolia addStrategy tx: 0x5ac0db28fd8ddd9847f6f06a2992f8e46890d7f17deb072caee812d8ca37c3cd
+
+
+AMOY:
+MockERC20 deployed to: 0xd0B01c1ce87508757FEB41C5D8b2D117a4f4c283
+MockYieldStrategy deployed to: 0xEcC14061E9c3aa3cc1102d668c1b9e8c3da19392
+YieldAggregator deployed to: 0xf8BCC457c406a30e00340f4b78436f21a57073BA
+Amoy addStrategy tx: 0xb0239bd29d9472f2a1fe8b7104ecc9ae5be628541a4019e25051cd23c9c2a59b

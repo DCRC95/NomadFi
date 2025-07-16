@@ -55,10 +55,9 @@ const projectId = process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID || "";
 const config = getDefaultConfig({
   appName: "PastoralFi",
   projectId,
-  chains: [hardhat, polygonAmoy, sepolia],
+  chains: [polygonAmoy, sepolia], // Only testnets for demo
   ssr: false,
   transports: {
-    [hardhat.id]: http(),
     [polygonAmoy.id]: http(polygonAmoy.rpcUrls.default.http[0]),
     [sepolia.id]: http(sepolia.rpcUrls.default.http[0]),
   },

@@ -1,5 +1,6 @@
 require("dotenv").config();
 require("@nomicfoundation/hardhat-toolbox");
+require('@nomicfoundation/hardhat-ethers');
 
 /**
  * @type import('hardhat/config').HardhatUserConfig
@@ -8,15 +9,17 @@ module.exports = {
   defaultNetwork: "hardhat",
   networks: {
     hardhat: {},
-    mumbai: {
-      url: process.env.POLYGONSCAN_RPC_URL || "https://polygon-amoy.infura.io/v3/b3b18fff97b6463ca552f9334d7fe15f", // Polygon Amoy RPC URL
-      accounts: process.env.PRIVATE_KEY ? [process.env.PRIVATE_KEY] : [],
-      chainId: 80001,
-    },
     sepolia: {
-      url: process.env.ETHEREUM_SEPOLIA_RPC_URL || "https://sepolia.infura.io/v3/b3b18fff97b6463ca552f9334d7fe15f", // Ethereum Sepolia RPC URL
-      accounts: process.env.PRIVATE_KEY ? [process.env.PRIVATE_KEY] : [],
+      url: process.env.SEPOLIA_RPC_URL,
       chainId: 11155111,
+      accounts: process.env.PRIVATE_KEY ? [process.env.PRIVATE_KEY] : [],
+      // gasPrice: 1000000000, // Optional: specify if needed
+    },
+    amoy: {
+      url: process.env.AMOY_RPC_URL,
+      chainId: 80002, // Amoy testnet chainId
+      accounts: process.env.PRIVATE_KEY ? [process.env.PRIVATE_KEY] : [],
+      // gasPrice: 1000000000, // Optional: specify if needed
     },
   },
   solidity: {
@@ -29,9 +32,13 @@ module.exports = {
     },
   },
   etherscan: {
-    apiKey: {
-      polygonMumbai: process.env.POLYGONSCAN_API_KEY || "YOUR_POLYGONSCAN_API_KEY",
-      sepolia: process.env.ETHERSCAN_API_KEY || "YOUR_ETHERSCAN_API_KEY",
-    },
+    apiKey: 
+      process.env.ETHERSCAN_API_KEY,  
+    
   },
 };
+
+// Notes:
+// - Set your PRIVATE_KEY, AMOY_RPC_URL, SEPOLIA_RPC_URL, POLYGONSCAN_API_KEY, and ETHERSCAN_API_KEY in a .env file (never commit secrets).
+// - Use secure providers like Alchemy or Infura for RPC URLs.
+// - Never commit your private key or sensitive data to version control.
