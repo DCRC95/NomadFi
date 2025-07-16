@@ -102,20 +102,46 @@ interface StrategyListProps {
   filterRiskCategories: string[];
 }
 
+type YieldStrategy = {
+  id: string;
+  chainId: number;
+  name: string;
+  description: string;
+  baseRiskScore: number | string;
+  strategyAddress: string;
+  [key: string]: any;
+};
+
 export default function StrategyList({ strategies, filterRiskCategories }: StrategyListProps) {
-  console.log('[StrategyList] Rendering strategies:', strategies);
+  // Only filter if every strategy has the required fields
+  const canFilter = Array.isArray(strategies) && strategies.length > 0 && strategies.every(s =>
+    s && typeof s === 'object' && 'baseRiskScore' in s && 'name' in s && 'strategyAddress' in s
+  );
+
+  const filteredStrategies = canFilter
+    ? (strategies as YieldStrategy[]).filter(strategy => {
+        let riskCategory = "Unknown";
+        try {
+          // Ensure baseRiskScore is a number for risk calculation
+          const safeStrategy = {
+            ...strategy,
+            baseRiskScore: typeof strategy.baseRiskScore === 'string' ? Number(strategy.baseRiskScore) : strategy.baseRiskScore,
+          };
+          riskCategory = calculateRiskCategory(safeStrategy);
+        } catch {}
+        return filterRiskCategories.includes(riskCategory);
+      })
+    : strategies;
+
   return (
     <div className="grid grid-cols-1 gap-6">
-      {strategies.map(strategy => {
-        console.log('[StrategyList] Rendering StrategyCardWithFilter for:', strategy);
-        return (
-          <StrategyCardWithFilter
-            key={strategy.id + '-' + strategy.chainId}
-            strategy={strategy}
-            filterRiskCategories={filterRiskCategories}
-          />
-        );
-      })}
+      {filteredStrategies.map(strategy => (
+        <StrategyCardWithFilter
+          key={strategy.id + '-' + strategy.chainId}
+          strategy={strategy}
+          filterRiskCategories={filterRiskCategories}
+        />
+      ))}
     </div>
   );
 }
@@ -148,25 +174,6 @@ function StrategyCardWithFilter({ strategy, filterRiskCategories }: { strategy: 
       ? "text-red-600 bg-red-100 border-red-300"
       : "text-gray-500 bg-gray-100 border-gray-300";
 
-  // APY fetching
-  function StrategyAPY({ strategyAddress, strategyChainId }: { strategyAddress: `0x${string}`; strategyChainId: number }) {
-    const connectedChainId = useChainId();
-    const shouldFetch = Number(connectedChainId) === Number(strategyChainId);
-    const { data: apyData, isLoading, error } = useReadContract({
-      address: strategyAddress,
-      abi: MOCK_YIELD_STRATEGY_ABI,
-      functionName: "getAPY",
-    });
-    if (!shouldFetch) return <span className="text-gray-400">Switch network to view APY</span>;
-    if (isLoading) return <span className="text-gray-400">Loading APY...</span>;
-    if (error) return <span className="text-red-400">Error</span>;
-    if (apyData !== undefined) {
-      const apy = Number(apyData) / 100;
-      return <span className="text-green-600 font-semibold">{apy}%</span>;
-    }
-    return <span className="text-gray-400">N/A</span>;
-  }
-
   // User deposit fetching
   const [refreshKey, setRefreshKey] = React.useState(0);
   const { data: userDeposit, refetch: refetchUserDeposit } = useReadContract({
@@ -194,11 +201,21 @@ function StrategyCardWithFilter({ strategy, filterRiskCategories }: { strategy: 
     setTxError(null);
     try {
       const fn = showForm === "deposit" ? "deposit" : "withdraw";
+      // Convert amount to BigInt using ethers.parseUnits (18 decimals)
+      let amountBigInt: bigint;
+      try {
+        if (!amount || isNaN(Number(amount))) throw new Error("Invalid amount");
+        amountBigInt = ethers.parseUnits(amount, 18);
+      } catch (parseErr: any) {
+        setTxState("error");
+        setTxError("Invalid amount format");
+        return;
+      }
       await writeContractAsync({
         address: aggregatorAddress,
         abi: YIELD_AGGREGATOR_ABI,
         functionName: fn,
-        args: [strategyId, BigInt(amount)],
+        args: [strategyId, amountBigInt],
       });
       if (typeof refetchUserDeposit === "function") {
         await refetchUserDeposit();
@@ -231,17 +248,31 @@ function StrategyCardWithFilter({ strategy, filterRiskCategories }: { strategy: 
               placeholder="Enter amount"
             />
           </label>
-          <button
-            type="submit"
-            className="px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700"
-            disabled={!amount || Number(amount) <= 0 || txState === "loading"}
-          >
-            {txState === "loading"
-              ? "Confirming..."
-              : showForm === "deposit"
-              ? "Confirm Deposit"
-              : "Confirm Withdraw"}
-          </button>
+          <div className="flex gap-2">
+            <button
+              type="submit"
+              className="px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700"
+              disabled={!amount || Number(amount) <= 0 || txState === "loading"}
+            >
+              {txState === "loading"
+                ? "Confirming..."
+                : showForm === "deposit"
+                ? "Confirm Deposit"
+                : "Confirm Withdraw"}
+            </button>
+            <button
+              type="button"
+              className="px-3 py-1 bg-gray-300 text-gray-700 rounded hover:bg-gray-400"
+              onClick={() => {
+                setShowForm(null);
+                setTxState("idle");
+                setTxError(null);
+                setAmount("");
+              }}
+            >
+              Cancel
+            </button>
+          </div>
           {txState === "success" && (
             <div className="text-green-600 text-sm mt-1">Success!</div>
           )}
@@ -299,7 +330,7 @@ function StrategyCardWithFilter({ strategy, filterRiskCategories }: { strategy: 
         <span className="font-medium">Chain:</span> {CHAIN_NAMES[Number(info.chainId)] || info.chainId}
       </div>
       <div className="text-sm text-gray-500 mb-1">
-        <span className="font-medium">APY:</span> <StrategyAPY strategyAddress={info.strategyAddress} strategyChainId={info.chainId} />
+        <span className="font-medium">APY:</span> <span className="text-green-600 font-semibold">{info.apy ? `${Number(info.apy) / 100}%` : 'N/A'}</span>
       </div>
       <div className="text-xs text-gray-400 mb-2">
         <span className="font-medium">Address:</span> {info.strategyAddress}
