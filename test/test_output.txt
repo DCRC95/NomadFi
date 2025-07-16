@@ -1,0 +1,946 @@
+        ✔ Should revert with the right error if called from another account
+        ✔ Shouldn't fail if the unlockTime has arrived and the owner calls it
+      Events
+        ✔ Should emit an event on withdrawals
+      Transfers
+        ✔ Should transfer the funds to the owner
+
+  DeFi Yield Aggregator MVP
+    MockERC20
+      ✔ should have zero total supply initially
+      after minting
+        ✔ should mint tokens to the caller and increase total supply
+        ✔ should transfer tokens and emit Transfer event
+        ✔ should approve and transferFrom correctly, emitting Approval and Transfer events
+    MockYieldStrategy
+      ✔ should be deployed with the correct mock token address
+      ✔ getAPY() should return the hardcoded value
+      ✔ should allow deposit, update mapping, and emit Deposit event
+      ✔ should allow withdraw, update mapping, and emit Withdraw event
+      ✔ should revert withdraw if balance is insufficient
+    YieldAggregator
+      ✔ should set the owner to the deployer
+      ✔ should prevent non-owners from adding a strategy
+      1) should add a strategy as owner and emit event
+      ✔ should emit StrategyAdded event when adding
+      ✔ should prevent non-owners from removing a strategy
+      ✔ should set isActive to false and emit event on remove
+      ✔ should return correct strategy info and handle non-existent IDs
+      Conceptual Deposit/Withdrawal (Local Strategy)
+        ✔ should update userDeposits and emit DepositRecorded on deposit
+        ✔ should revert deposit if strategy is not active
+        ✔ should update userDeposits and emit WithdrawalRecorded on withdraw
+        ✔ should revert withdraw if insufficient deposit
+        ✔ should return correct deposit for getUserDeposit
+
+
+  29 passing (283ms)
+  1 failing
+
+  1) DeFi Yield Aggregator MVP
+       YieldAggregator
+         should add a strategy as owner and emit event:
+     AssertionError: expected [] to include '0x6023dd6cdff6e04b5b020acc1761129f4c2…'
+      at Context.<anonymous> (test/YieldAggregator.test.js:164:25)
+
+
+
+·············································································································
+|  Solidity and Network Configuration                                                                       │
+························|·················|···············|·················|································
+|  Solidity: 0.8.20     ·  Optim: true    ·  Runs: 200    ·  viaIR: false   ·     Block: 30,000,000 gas     │
+························|·················|···············|·················|································
+|  Methods                                                                                                  │
+························|·················|···············|·················|················|···············
+|  Contracts / Methods  ·  Min            ·  Max          ·  Avg            ·  # calls       ·  usd (avg)   │
+························|·················|···············|·················|················|···············
+|  Lock                 ·                                                                                   │
+························|·················|···············|·················|················|···············
+|      withdraw         ·              -  ·            -  ·         33,820  ·             7  ·           -  │
+························|·················|···············|·················|················|···············
+|  MockERC20            ·                                                                                   │
+························|·················|···············|·················|················|···············
+|      approve          ·         46,371  ·       46,383  ·         46,374  ·             4  ·           -  │
+························|·················|···············|·················|················|···············
+|      mint             ·         33,804  ·       68,004  ·         58,796  ·            13  ·           -  │
+························|·················|···············|·················|················|···············
+|      transfer         ·              -  ·            -  ·         34,520  ·             2  ·           -  │
+························|·················|···············|·················|················|···············
+|      transferFrom     ·              -  ·            -  ·         35,765  ·             2  ·           -  │
+························|·················|···············|·················|················|···············
+|  MockYieldStrategy    ·                                                                                   │
+························|·················|···············|·················|················|···············
+|      deposit          ·              -  ·            -  ·         81,173  ·             3  ·           -  │
+························|·················|···············|·················|················|···············
+|      withdraw         ·              -  ·            -  ·         36,975  ·             2  ·           -  │
+························|·················|···············|·················|················|···············
+|  YieldAggregator      ·                                                                                   │
+························|·················|···············|·················|················|···············
+|      addStrategy      ·        213,995  ·      320,845  ·        312,625  ·            26  ·           -  │
+························|·················|···············|·················|················|···············
+|      deposit          ·              -  ·            -  ·         50,783  ·             4  ·           -  │
+························|·················|···············|·················|················|···············
+|      removeStrategy   ·              -  ·            -  ·         25,701  ·             3  ·           -  │
+························|·················|···············|·················|················|···············
+|      withdraw         ·              -  ·            -  ·         27,600  ·             2  ·           -  │
+························|·················|···············|·················|················|···············
+|  Deployments                            ·                                 ·  % of limit    ·              │
+························|·················|···············|·················|················|···············
+|  Lock                 ·              -  ·            -  ·        204,563  ·         0.7 %  ·           -  │
+························|·················|···············|·················|················|···············
+|  MockERC20            ·              -  ·            -  ·        527,203  ·         1.8 %  ·           -  │
+························|·················|···············|·················|················|···············
+|  MockYieldStrategy    ·        321,540  ·      321,552  ·        321,551  ·         1.1 %  ·           -  │
+························|·················|···············|·················|················|···············
+|  YieldAggregator      ·              -  ·            -  ·      1,071,092  ·         3.6 %  ·           -  │
+························|·················|···············|·················|················|···············
+|  Key                                                                                                      │
+·············································································································
+|  ◯  Execution gas for this method does not include intrinsic gas overhead                                 │
+·············································································································
+|  △  Cost was non-zero but below the precision setting for the currency display (see options)              │
+·············································································································
+|  Toolchain:  hardhat                                                                                      │
+·············································································································
+rhys@localhost Nomad Fi % npx hardhat test
+[dotenv@17.2.0] injecting env (0) from .env (tip: 🔐 encrypt with dotenvx: https://dotenvx.com)
+
+
+  Lock
+    Deployment
+      ✔ Should set the right unlockTime
+      ✔ Should set the right owner
+      ✔ Should receive and store the funds to lock
+      ✔ Should fail if the unlockTime is not in the future
+    Withdrawals
+      Validations
+        ✔ Should revert with the right error if called too soon
+        ✔ Should revert with the right error if called from another account
+        ✔ Shouldn't fail if the unlockTime has arrived and the owner calls it
+      Events
+        ✔ Should emit an event on withdrawals
+      Transfers
+        ✔ Should transfer the funds to the owner
+
+  DeFi Yield Aggregator MVP
+    MockERC20
+      ✔ should have zero total supply initially
+      after minting
+        ✔ should mint tokens to the caller and increase total supply
+        ✔ should transfer tokens and emit Transfer event
+        ✔ should approve and transferFrom correctly, emitting Approval and Transfer events
+    MockYieldStrategy
+      ✔ should be deployed with the correct mock token address
+      ✔ getAPY() should return the hardcoded value
+      ✔ should allow deposit, update mapping, and emit Deposit event
+      ✔ should allow withdraw, update mapping, and emit Withdraw event
+      ✔ should revert withdraw if balance is insufficient
+    YieldAggregator
+      ✔ should set the owner to the deployer
+      ✔ should prevent non-owners from adding a strategy
+localStrategyId: 0x6023dd6cdff6e04b5b020acc1761129f4c258d74fa55770d86c913af7d6f576b
+idsArray: []
+      1) should add a strategy as owner and emit event
+      ✔ should emit StrategyAdded event when adding
+      ✔ should prevent non-owners from removing a strategy
+      ✔ should set isActive to false and emit event on remove
+      ✔ should return correct strategy info and handle non-existent IDs
+      Conceptual Deposit/Withdrawal (Local Strategy)
+        ✔ should update userDeposits and emit DepositRecorded on deposit
+        ✔ should revert deposit if strategy is not active
+        ✔ should update userDeposits and emit WithdrawalRecorded on withdraw
+        ✔ should revert withdraw if insufficient deposit
+        ✔ should return correct deposit for getUserDeposit
+
+
+  29 passing (318ms)
+  1 failing
+
+  1) DeFi Yield Aggregator MVP
+       YieldAggregator
+         should add a strategy as owner and emit event:
+     AssertionError: expected [] to include '0x6023dd6cdff6e04b5b020acc1761129f4c2…'
+      at Context.<anonymous> (test/YieldAggregator.test.js:166:25)
+
+
+
+·············································································································
+|  Solidity and Network Configuration                                                                       │
+························|·················|···············|·················|································
+|  Solidity: 0.8.20     ·  Optim: true    ·  Runs: 200    ·  viaIR: false   ·     Block: 30,000,000 gas     │
+························|·················|···············|·················|································
+|  Methods                                                                                                  │
+························|·················|···············|·················|················|···············
+|  Contracts / Methods  ·  Min            ·  Max          ·  Avg            ·  # calls       ·  usd (avg)   │
+························|·················|···············|·················|················|···············
+|  Lock                 ·                                                                                   │
+························|·················|···············|·················|················|···············
+|      withdraw         ·              -  ·            -  ·         33,820  ·             7  ·           -  │
+························|·················|···············|·················|················|···············
+|  MockERC20            ·                                                                                   │
+························|·················|···············|·················|················|···············
+|      approve          ·         46,371  ·       46,383  ·         46,374  ·             4  ·           -  │
+························|·················|···············|·················|················|···············
+|      mint             ·         33,804  ·       68,004  ·         58,796  ·            13  ·           -  │
+························|·················|···············|·················|················|···············
+|      transfer         ·              -  ·            -  ·         34,520  ·             2  ·           -  │
+························|·················|···············|·················|················|···············
+|      transferFrom     ·              -  ·            -  ·         35,765  ·             2  ·           -  │
+························|·················|···············|·················|················|···············
+|  MockYieldStrategy    ·                                                                                   │
+························|·················|···············|·················|················|···············
+|      deposit          ·              -  ·            -  ·         81,173  ·             3  ·           -  │
+························|·················|···············|·················|················|···············
+|      withdraw         ·              -  ·            -  ·         36,975  ·             2  ·           -  │
+························|·················|···············|·················|················|···············
+|  YieldAggregator      ·                                                                                   │
+························|·················|···············|·················|················|···············
+|      addStrategy      ·        213,995  ·      320,845  ·        312,625  ·            26  ·           -  │
+························|·················|···············|·················|················|···············
+|      deposit          ·              -  ·            -  ·         50,783  ·             4  ·           -  │
+························|·················|···············|·················|················|···············
+|      removeStrategy   ·              -  ·            -  ·         25,701  ·             3  ·           -  │
+························|·················|···············|·················|················|···············
+|      withdraw         ·              -  ·            -  ·         27,600  ·             2  ·           -  │
+························|·················|···············|·················|················|···············
+|  Deployments                            ·                                 ·  % of limit    ·              │
+························|·················|···············|·················|················|···············
+|  Lock                 ·              -  ·            -  ·        204,563  ·         0.7 %  ·           -  │
+························|·················|···············|·················|················|···············
+|  MockERC20            ·              -  ·            -  ·        527,203  ·         1.8 %  ·           -  │
+························|·················|···············|·················|················|···············
+|  MockYieldStrategy    ·        321,540  ·      321,552  ·        321,551  ·         1.1 %  ·           -  │
+························|·················|···············|·················|················|···············
+|  YieldAggregator      ·              -  ·            -  ·      1,071,092  ·         3.6 %  ·           -  │
+························|·················|···············|·················|················|···············
+|  Key                                                                                                      │
+·············································································································
+|  ◯  Execution gas for this method does not include intrinsic gas overhead                                 │
+·············································································································
+|  △  Cost was non-zero but below the precision setting for the currency display (see options)              │
+·············································································································
+|  Toolchain:  hardhat                                                                                      │
+·············································································································
+rhys@localhost Nomad Fi % npx hardhat test --grep "should add a strategy as owner and emit event" --verbose
+  hardhat:core:vars:varsManager Creating a new instance of VarsManager +0ms
+  hardhat:core:vars:varsManager Loading ENV variables if any +1ms
+  hardhat:core:config Loading Hardhat config from /Users/rhys/Documents/Computing Files/Nomad Fi/hardhat.config.js +0ms
+[dotenv@17.2.0] injecting env (0) from .env (tip: ⚙️  enable debug logging with { debug: true })
+  hardhat:core:hre Creating HardhatRuntimeEnvironment +0ms
+  hardhat:core:global-dir Looking up Client Id at /Users/rhys/Library/Application Support/hardhat-nodejs/analytics.json +0ms
+  hardhat:core:global-dir Client Id found: 575a4947-015e-4e8f-8397-c8487a668616 +0ms
+  hardhat:core:analytics Sending hit for task +0ms
+  hardhat:core:analytics Hit payload: {"client_id":"575a4947-015e-4e8f-8397-c8487a668616","user_id":"575a4947-015e-4e8f-8397-c8487a668616","user_properties":{"projectId":{"value":"hardhat-project"},"userType":{"value":"Developer"},"hardhatVersion":{"value":"Hardhat 2.25.0"},"operatingSystem":{"value":"darwin"},"nodeVersion":{"value":"v22.14.0"}},"events":[{"name":"task","params":{"engagement_time_msec":"10000","session_id":"0.5171381370522967"}}]} +0ms
+  hardhat:core:hre Running task test +51ms
+  hardhat:core:hre Running task hhgas:start +1ms
+  hardhat:core:hre Running task compile +56ms
+  hardhat:core:hre Running compile's super +0ms
+  hardhat:core:hre Running task compile:get-compilation-tasks +0ms
+  hardhat:core:hre Running task compile:solidity +0ms
+  hardhat:core:hre Running task compile:solidity:get-source-paths +0ms
+  hardhat:core:hre Running task compile:solidity:get-source-names +1ms
+  hardhat:core:hre Running task compile:solidity:get-dependency-graph +1ms
+  hardhat:core:hre Running task compile:solidity:get-remappings +0ms
+  hardhat:core:hre Running task compile:solidity:read-file +1ms
+  hardhat:core:hre Running task compile:solidity:read-file +0ms
+  hardhat:core:hre Running task compile:solidity:read-file +0ms
+  hardhat:core:hre Running task compile:solidity:read-file +0ms
+  hardhat:core:hre Running task compile:solidity:transform-import-name +0ms
+  hardhat:core:hre Running task compile:solidity:transform-import-name +1ms
+  hardhat:core:hre Running task compile:solidity:transform-import-name +0ms
+  hardhat:core:hre Running task compile:solidity:transform-import-name +0ms
+  hardhat:core:hre Running task compile:solidity:read-file +13ms
+  hardhat:core:hre Running task compile:solidity:read-file +0ms
+  hardhat:core:hre Running task compile:solidity:read-file +0ms
+  hardhat:core:hre Running task compile:solidity:read-file +0ms
+  hardhat:core:hre Running task compile:solidity:transform-import-name +0ms
+  hardhat:core:hre Running task compile:solidity:transform-import-name +0ms
+  hardhat:core:hre Running task compile:solidity:transform-import-name +0ms
+  hardhat:core:hre Running task compile:solidity:transform-import-name +0ms
+  hardhat:core:hre Running task compile:solidity:transform-import-name +0ms
+  hardhat:core:hre Running task compile:solidity:read-file +2ms
+  hardhat:core:hre Running task compile:solidity:read-file +0ms
+  hardhat:core:hre Running task compile:solidity:read-file +0ms
+  hardhat:core:hre Running task compile:solidity:read-file +0ms
+  hardhat:core:hre Running task compile:solidity:transform-import-name +1ms
+  hardhat:core:hre Running task compile:solidity:get-compilation-jobs +1ms
+  hardhat:core:tasks:compile The dependency graph was divided in '2' connected components +0ms
+  hardhat:core:hre Running task compile:solidity:get-compilation-job-for-file +0ms
+  hardhat:core:hre Running compile:solidity:get-compilation-job-for-file's super +0ms
+  hardhat:core:compilation-job File '/Users/rhys/Documents/Computing Files/Nomad Fi/contracts/Lock.sol' will be compiled with version '0.8.20' +0ms
+  hardhat:core:hre Running task compile:solidity:get-compilation-job-for-file +1ms
+  hardhat:core:hre Running compile:solidity:get-compilation-job-for-file's super +0ms
+  hardhat:core:compilation-job File '/Users/rhys/Documents/Computing Files/Nomad Fi/contracts/MockERC20.sol' will be compiled with version '0.8.20' +1ms
+  hardhat:core:compilation-job File '/Users/rhys/Documents/Computing Files/Nomad Fi/node_modules/@openzeppelin/contracts/token/ERC20/ERC20.sol' added as dependency of '/Users/rhys/Documents/Computing Files/Nomad Fi/contracts/MockERC20.sol' +0ms
+  hardhat:core:compilation-job File '/Users/rhys/Documents/Computing Files/Nomad Fi/node_modules/@openzeppelin/contracts/token/ERC20/IERC20.sol' added as dependency of '/Users/rhys/Documents/Computing Files/Nomad Fi/contracts/MockERC20.sol' +0ms
+  hardhat:core:compilation-job File '/Users/rhys/Documents/Computing Files/Nomad Fi/node_modules/@openzeppelin/contracts/utils/Context.sol' added as dependency of '/Users/rhys/Documents/Computing Files/Nomad Fi/contracts/MockERC20.sol' +0ms
+  hardhat:core:compilation-job File '/Users/rhys/Documents/Computing Files/Nomad Fi/node_modules/@openzeppelin/contracts/interfaces/draft-IERC6093.sol' added as dependency of '/Users/rhys/Documents/Computing Files/Nomad Fi/contracts/MockERC20.sol' +0ms
+  hardhat:core:compilation-job File '/Users/rhys/Documents/Computing Files/Nomad Fi/node_modules/@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol' added as dependency of '/Users/rhys/Documents/Computing Files/Nomad Fi/contracts/MockERC20.sol' +0ms
+  hardhat:core:compilation-job File '/Users/rhys/Documents/Computing Files/Nomad Fi/node_modules/@openzeppelin/contracts/token/ERC20/IERC20.sol' added as dependency of '/Users/rhys/Documents/Computing Files/Nomad Fi/contracts/MockERC20.sol' +0ms
+  hardhat:core:hre Running task compile:solidity:get-compilation-job-for-file +0ms
+  hardhat:core:hre Running compile:solidity:get-compilation-job-for-file's super +0ms
+  hardhat:core:compilation-job File '/Users/rhys/Documents/Computing Files/Nomad Fi/node_modules/@openzeppelin/contracts/token/ERC20/ERC20.sol' will be compiled with version '0.8.20' +0ms
+  hardhat:core:compilation-job File '/Users/rhys/Documents/Computing Files/Nomad Fi/node_modules/@openzeppelin/contracts/token/ERC20/IERC20.sol' added as dependency of '/Users/rhys/Documents/Computing Files/Nomad Fi/node_modules/@openzeppelin/contracts/token/ERC20/ERC20.sol' +0ms
+  hardhat:core:compilation-job File '/Users/rhys/Documents/Computing Files/Nomad Fi/node_modules/@openzeppelin/contracts/utils/Context.sol' added as dependency of '/Users/rhys/Documents/Computing Files/Nomad Fi/node_modules/@openzeppelin/contracts/token/ERC20/ERC20.sol' +0ms
+  hardhat:core:compilation-job File '/Users/rhys/Documents/Computing Files/Nomad Fi/node_modules/@openzeppelin/contracts/interfaces/draft-IERC6093.sol' added as dependency of '/Users/rhys/Documents/Computing Files/Nomad Fi/node_modules/@openzeppelin/contracts/token/ERC20/ERC20.sol' +0ms
+  hardhat:core:compilation-job File '/Users/rhys/Documents/Computing Files/Nomad Fi/node_modules/@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol' added as dependency of '/Users/rhys/Documents/Computing Files/Nomad Fi/node_modules/@openzeppelin/contracts/token/ERC20/ERC20.sol' +0ms
+  hardhat:core:compilation-job File '/Users/rhys/Documents/Computing Files/Nomad Fi/node_modules/@openzeppelin/contracts/token/ERC20/IERC20.sol' added as dependency of '/Users/rhys/Documents/Computing Files/Nomad Fi/node_modules/@openzeppelin/contracts/token/ERC20/ERC20.sol' +0ms
+  hardhat:core:hre Running task compile:solidity:get-compilation-job-for-file +0ms
+  hardhat:core:hre Running compile:solidity:get-compilation-job-for-file's super +0ms
+  hardhat:core:compilation-job File '/Users/rhys/Documents/Computing Files/Nomad Fi/node_modules/@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol' will be compiled with version '0.8.20' +0ms
+  hardhat:core:compilation-job File '/Users/rhys/Documents/Computing Files/Nomad Fi/node_modules/@openzeppelin/contracts/token/ERC20/IERC20.sol' added as dependency of '/Users/rhys/Documents/Computing Files/Nomad Fi/node_modules/@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol' +0ms
+  hardhat:core:hre Running task compile:solidity:get-compilation-job-for-file +0ms
+  hardhat:core:hre Running compile:solidity:get-compilation-job-for-file's super +0ms
+  hardhat:core:compilation-job File '/Users/rhys/Documents/Computing Files/Nomad Fi/node_modules/@openzeppelin/contracts/token/ERC20/IERC20.sol' will be compiled with version '0.8.20' +0ms
+  hardhat:core:hre Running task compile:solidity:get-compilation-job-for-file +0ms
+  hardhat:core:hre Running compile:solidity:get-compilation-job-for-file's super +0ms
+  hardhat:core:compilation-job File '/Users/rhys/Documents/Computing Files/Nomad Fi/contracts/MockYieldStrategy.sol' will be compiled with version '0.8.20' +0ms
+  hardhat:core:compilation-job File '/Users/rhys/Documents/Computing Files/Nomad Fi/node_modules/@openzeppelin/contracts/token/ERC20/IERC20.sol' added as dependency of '/Users/rhys/Documents/Computing Files/Nomad Fi/contracts/MockYieldStrategy.sol' +0ms
+  hardhat:core:hre Running task compile:solidity:get-compilation-job-for-file +1ms
+  hardhat:core:hre Running compile:solidity:get-compilation-job-for-file's super +0ms
+  hardhat:core:compilation-job File '/Users/rhys/Documents/Computing Files/Nomad Fi/node_modules/@openzeppelin/contracts/interfaces/draft-IERC6093.sol' will be compiled with version '0.8.20' +1ms
+  hardhat:core:hre Running task compile:solidity:get-compilation-job-for-file +0ms
+  hardhat:core:hre Running compile:solidity:get-compilation-job-for-file's super +0ms
+  hardhat:core:compilation-job File '/Users/rhys/Documents/Computing Files/Nomad Fi/node_modules/@openzeppelin/contracts/utils/Context.sol' will be compiled with version '0.8.20' +0ms
+  hardhat:core:hre Running task compile:solidity:get-compilation-job-for-file +0ms
+  hardhat:core:hre Running compile:solidity:get-compilation-job-for-file's super +0ms
+  hardhat:core:compilation-job File '/Users/rhys/Documents/Computing Files/Nomad Fi/node_modules/@openzeppelin/contracts/access/Ownable.sol' will be compiled with version '0.8.20' +0ms
+  hardhat:core:compilation-job File '/Users/rhys/Documents/Computing Files/Nomad Fi/node_modules/@openzeppelin/contracts/utils/Context.sol' added as dependency of '/Users/rhys/Documents/Computing Files/Nomad Fi/node_modules/@openzeppelin/contracts/access/Ownable.sol' +0ms
+  hardhat:core:hre Running task compile:solidity:get-compilation-job-for-file +0ms
+  hardhat:core:hre Running compile:solidity:get-compilation-job-for-file's super +0ms
+  hardhat:core:compilation-job File '/Users/rhys/Documents/Computing Files/Nomad Fi/contracts/YieldAggregator.sol' will be compiled with version '0.8.20' +0ms
+  hardhat:core:compilation-job File '/Users/rhys/Documents/Computing Files/Nomad Fi/node_modules/@openzeppelin/contracts/access/Ownable.sol' added as dependency of '/Users/rhys/Documents/Computing Files/Nomad Fi/contracts/YieldAggregator.sol' +0ms
+  hardhat:core:compilation-job File '/Users/rhys/Documents/Computing Files/Nomad Fi/node_modules/@openzeppelin/contracts/utils/ReentrancyGuard.sol' added as dependency of '/Users/rhys/Documents/Computing Files/Nomad Fi/contracts/YieldAggregator.sol' +0ms
+  hardhat:core:compilation-job File '/Users/rhys/Documents/Computing Files/Nomad Fi/node_modules/@openzeppelin/contracts/utils/Context.sol' added as dependency of '/Users/rhys/Documents/Computing Files/Nomad Fi/contracts/YieldAggregator.sol' +0ms
+  hardhat:core:hre Running task compile:solidity:get-compilation-job-for-file +0ms
+  hardhat:core:hre Running compile:solidity:get-compilation-job-for-file's super +0ms
+  hardhat:core:compilation-job File '/Users/rhys/Documents/Computing Files/Nomad Fi/node_modules/@openzeppelin/contracts/utils/ReentrancyGuard.sol' will be compiled with version '0.8.20' +0ms
+  hardhat:core:hre Running task compile:solidity:handle-compilation-jobs-failures +0ms
+  hardhat:core:hre Running task compile:solidity:filter-compilation-jobs +0ms
+  hardhat:core:tasks:compile '11' jobs were filtered out +3ms
+  hardhat:core:hre Running task compile:solidity:merge-compilation-jobs +1ms
+  hardhat:core:hre Running task compile:solidity:compile-jobs +0ms
+  hardhat:core:hre Running compile:solidity:compile-jobs's super +0ms
+  hardhat:core:tasks:compile No compilation jobs to compile +0ms
+  hardhat:core:hre Running task compile:solidity:log:nothing-to-compile +0ms
+  hardhat:core:hre Running task typechain:generate-types +0ms
+  hardhat:core:hre Running task compile:solidity:log:compilation-result +1ms
+  hardhat:core:hre Running task compile:remove-obsolete-artifacts +0ms
+  hardhat:core:hre Creating provider for network hardhat +17ms
+  hardhat:core:hardhat-network:provider Making tracing config +0ms
+  hardhat:core:hardhat-network:provider Creating EDR provider +4ms
+  hardhat:core:hardhat-network:provider EDR provider created +6ms
+  hardhat:core:hre Running test's super +226ms
+  hardhat:core:hre Running task compile +0ms
+  hardhat:core:hre Running compile's super +0ms
+  hardhat:core:hre Running task compile:get-compilation-tasks +0ms
+  hardhat:core:hre Running task compile:solidity +0ms
+  hardhat:core:hre Running task compile:solidity:get-source-paths +0ms
+  hardhat:core:hre Running task compile:solidity:get-source-names +1ms
+  hardhat:core:hre Running task compile:solidity:get-dependency-graph +0ms
+  hardhat:core:hre Running task compile:solidity:get-remappings +0ms
+  hardhat:core:hre Running task compile:solidity:read-file +0ms
+  hardhat:core:hre Running task compile:solidity:read-file +0ms
+  hardhat:core:hre Running task compile:solidity:read-file +0ms
+  hardhat:core:hre Running task compile:solidity:read-file +0ms
+  hardhat:core:hre Running task compile:solidity:transform-import-name +1ms
+  hardhat:core:hre Running task compile:solidity:transform-import-name +0ms
+  hardhat:core:hre Running task compile:solidity:transform-import-name +0ms
+  hardhat:core:hre Running task compile:solidity:transform-import-name +0ms
+  hardhat:core:hre Running task compile:solidity:read-file +1ms
+  hardhat:core:hre Running task compile:solidity:read-file +0ms
+  hardhat:core:hre Running task compile:solidity:read-file +1ms
+  hardhat:core:hre Running task compile:solidity:transform-import-name +0ms
+  hardhat:core:hre Running task compile:solidity:transform-import-name +0ms
+  hardhat:core:hre Running task compile:solidity:transform-import-name +0ms
+  hardhat:core:hre Running task compile:solidity:transform-import-name +0ms
+  hardhat:core:hre Running task compile:solidity:transform-import-name +0ms
+  hardhat:core:hre Running task compile:solidity:read-file +0ms
+  hardhat:core:hre Running task compile:solidity:read-file +1ms
+  hardhat:core:hre Running task compile:solidity:read-file +0ms
+  hardhat:core:hre Running task compile:solidity:read-file +0ms
+  hardhat:core:hre Running task compile:solidity:read-file +0ms
+  hardhat:core:hre Running task compile:solidity:read-file +0ms
+  hardhat:core:hre Running task compile:solidity:transform-import-name +1ms
+  hardhat:core:hre Running task compile:solidity:get-compilation-jobs +0ms
+  hardhat:core:tasks:compile The dependency graph was divided in '2' connected components +250ms
+  hardhat:core:hre Running task compile:solidity:get-compilation-job-for-file +0ms
+  hardhat:core:hre Running compile:solidity:get-compilation-job-for-file's super +0ms
+  hardhat:core:compilation-job File '/Users/rhys/Documents/Computing Files/Nomad Fi/contracts/Lock.sol' will be compiled with version '0.8.20' +251ms
+  hardhat:core:hre Running task compile:solidity:get-compilation-job-for-file +0ms
+  hardhat:core:hre Running compile:solidity:get-compilation-job-for-file's super +0ms
+  hardhat:core:compilation-job File '/Users/rhys/Documents/Computing Files/Nomad Fi/contracts/MockERC20.sol' will be compiled with version '0.8.20' +0ms
+  hardhat:core:compilation-job File '/Users/rhys/Documents/Computing Files/Nomad Fi/node_modules/@openzeppelin/contracts/token/ERC20/ERC20.sol' added as dependency of '/Users/rhys/Documents/Computing Files/Nomad Fi/contracts/MockERC20.sol' +0ms
+  hardhat:core:compilation-job File '/Users/rhys/Documents/Computing Files/Nomad Fi/node_modules/@openzeppelin/contracts/utils/Context.sol' added as dependency of '/Users/rhys/Documents/Computing Files/Nomad Fi/contracts/MockERC20.sol' +0ms
+  hardhat:core:compilation-job File '/Users/rhys/Documents/Computing Files/Nomad Fi/node_modules/@openzeppelin/contracts/token/ERC20/IERC20.sol' added as dependency of '/Users/rhys/Documents/Computing Files/Nomad Fi/contracts/MockERC20.sol' +0ms
+  hardhat:core:compilation-job File '/Users/rhys/Documents/Computing Files/Nomad Fi/node_modules/@openzeppelin/contracts/interfaces/draft-IERC6093.sol' added as dependency of '/Users/rhys/Documents/Computing Files/Nomad Fi/contracts/MockERC20.sol' +0ms
+  hardhat:core:compilation-job File '/Users/rhys/Documents/Computing Files/Nomad Fi/node_modules/@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol' added as dependency of '/Users/rhys/Documents/Computing Files/Nomad Fi/contracts/MockERC20.sol' +0ms
+  hardhat:core:compilation-job File '/Users/rhys/Documents/Computing Files/Nomad Fi/node_modules/@openzeppelin/contracts/token/ERC20/IERC20.sol' added as dependency of '/Users/rhys/Documents/Computing Files/Nomad Fi/contracts/MockERC20.sol' +0ms
+  hardhat:core:hre Running task compile:solidity:get-compilation-job-for-file +0ms
+  hardhat:core:hre Running compile:solidity:get-compilation-job-for-file's super +0ms
+  hardhat:core:compilation-job File '/Users/rhys/Documents/Computing Files/Nomad Fi/node_modules/@openzeppelin/contracts/token/ERC20/ERC20.sol' will be compiled with version '0.8.20' +0ms
+  hardhat:core:compilation-job File '/Users/rhys/Documents/Computing Files/Nomad Fi/node_modules/@openzeppelin/contracts/utils/Context.sol' added as dependency of '/Users/rhys/Documents/Computing Files/Nomad Fi/node_modules/@openzeppelin/contracts/token/ERC20/ERC20.sol' +0ms
+  hardhat:core:compilation-job File '/Users/rhys/Documents/Computing Files/Nomad Fi/node_modules/@openzeppelin/contracts/token/ERC20/IERC20.sol' added as dependency of '/Users/rhys/Documents/Computing Files/Nomad Fi/node_modules/@openzeppelin/contracts/token/ERC20/ERC20.sol' +0ms
+  hardhat:core:compilation-job File '/Users/rhys/Documents/Computing Files/Nomad Fi/node_modules/@openzeppelin/contracts/interfaces/draft-IERC6093.sol' added as dependency of '/Users/rhys/Documents/Computing Files/Nomad Fi/node_modules/@openzeppelin/contracts/token/ERC20/ERC20.sol' +0ms
+  hardhat:core:compilation-job File '/Users/rhys/Documents/Computing Files/Nomad Fi/node_modules/@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol' added as dependency of '/Users/rhys/Documents/Computing Files/Nomad Fi/node_modules/@openzeppelin/contracts/token/ERC20/ERC20.sol' +0ms
+  hardhat:core:compilation-job File '/Users/rhys/Documents/Computing Files/Nomad Fi/node_modules/@openzeppelin/contracts/token/ERC20/IERC20.sol' added as dependency of '/Users/rhys/Documents/Computing Files/Nomad Fi/node_modules/@openzeppelin/contracts/token/ERC20/ERC20.sol' +0ms
+  hardhat:core:hre Running task compile:solidity:get-compilation-job-for-file +0ms
+  hardhat:core:hre Running compile:solidity:get-compilation-job-for-file's super +0ms
+  hardhat:core:compilation-job File '/Users/rhys/Documents/Computing Files/Nomad Fi/node_modules/@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol' will be compiled with version '0.8.20' +0ms
+  hardhat:core:compilation-job File '/Users/rhys/Documents/Computing Files/Nomad Fi/node_modules/@openzeppelin/contracts/token/ERC20/IERC20.sol' added as dependency of '/Users/rhys/Documents/Computing Files/Nomad Fi/node_modules/@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol' +0ms
+  hardhat:core:hre Running task compile:solidity:get-compilation-job-for-file +0ms
+  hardhat:core:hre Running compile:solidity:get-compilation-job-for-file's super +0ms
+  hardhat:core:compilation-job File '/Users/rhys/Documents/Computing Files/Nomad Fi/node_modules/@openzeppelin/contracts/token/ERC20/IERC20.sol' will be compiled with version '0.8.20' +0ms
+  hardhat:core:hre Running task compile:solidity:get-compilation-job-for-file +0ms
+  hardhat:core:hre Running compile:solidity:get-compilation-job-for-file's super +0ms
+  hardhat:core:compilation-job File '/Users/rhys/Documents/Computing Files/Nomad Fi/contracts/MockYieldStrategy.sol' will be compiled with version '0.8.20' +0ms
+  hardhat:core:compilation-job File '/Users/rhys/Documents/Computing Files/Nomad Fi/node_modules/@openzeppelin/contracts/token/ERC20/IERC20.sol' added as dependency of '/Users/rhys/Documents/Computing Files/Nomad Fi/contracts/MockYieldStrategy.sol' +0ms
+  hardhat:core:hre Running task compile:solidity:get-compilation-job-for-file +0ms
+  hardhat:core:hre Running compile:solidity:get-compilation-job-for-file's super +0ms
+  hardhat:core:compilation-job File '/Users/rhys/Documents/Computing Files/Nomad Fi/node_modules/@openzeppelin/contracts/interfaces/draft-IERC6093.sol' will be compiled with version '0.8.20' +0ms
+  hardhat:core:hre Running task compile:solidity:get-compilation-job-for-file +0ms
+  hardhat:core:hre Running compile:solidity:get-compilation-job-for-file's super +0ms
+  hardhat:core:compilation-job File '/Users/rhys/Documents/Computing Files/Nomad Fi/node_modules/@openzeppelin/contracts/utils/Context.sol' will be compiled with version '0.8.20' +0ms
+  hardhat:core:hre Running task compile:solidity:get-compilation-job-for-file +0ms
+  hardhat:core:hre Running compile:solidity:get-compilation-job-for-file's super +0ms
+  hardhat:core:compilation-job File '/Users/rhys/Documents/Computing Files/Nomad Fi/node_modules/@openzeppelin/contracts/access/Ownable.sol' will be compiled with version '0.8.20' +0ms
+  hardhat:core:compilation-job File '/Users/rhys/Documents/Computing Files/Nomad Fi/node_modules/@openzeppelin/contracts/utils/Context.sol' added as dependency of '/Users/rhys/Documents/Computing Files/Nomad Fi/node_modules/@openzeppelin/contracts/access/Ownable.sol' +0ms
+  hardhat:core:hre Running task compile:solidity:get-compilation-job-for-file +0ms
+  hardhat:core:hre Running compile:solidity:get-compilation-job-for-file's super +0ms
+  hardhat:core:compilation-job File '/Users/rhys/Documents/Computing Files/Nomad Fi/contracts/YieldAggregator.sol' will be compiled with version '0.8.20' +1ms
+  hardhat:core:compilation-job File '/Users/rhys/Documents/Computing Files/Nomad Fi/node_modules/@openzeppelin/contracts/access/Ownable.sol' added as dependency of '/Users/rhys/Documents/Computing Files/Nomad Fi/contracts/YieldAggregator.sol' +0ms
+  hardhat:core:compilation-job File '/Users/rhys/Documents/Computing Files/Nomad Fi/node_modules/@openzeppelin/contracts/utils/ReentrancyGuard.sol' added as dependency of '/Users/rhys/Documents/Computing Files/Nomad Fi/contracts/YieldAggregator.sol' +0ms
+  hardhat:core:compilation-job File '/Users/rhys/Documents/Computing Files/Nomad Fi/node_modules/@openzeppelin/contracts/utils/Context.sol' added as dependency of '/Users/rhys/Documents/Computing Files/Nomad Fi/contracts/YieldAggregator.sol' +0ms
+  hardhat:core:hre Running task compile:solidity:get-compilation-job-for-file +1ms
+  hardhat:core:hre Running compile:solidity:get-compilation-job-for-file's super +0ms
+  hardhat:core:compilation-job File '/Users/rhys/Documents/Computing Files/Nomad Fi/node_modules/@openzeppelin/contracts/utils/ReentrancyGuard.sol' will be compiled with version '0.8.20' +0ms
+  hardhat:core:hre Running task compile:solidity:handle-compilation-jobs-failures +0ms
+  hardhat:core:hre Running task compile:solidity:filter-compilation-jobs +0ms
+  hardhat:core:tasks:compile '11' jobs were filtered out +1ms
+  hardhat:core:hre Running task compile:solidity:merge-compilation-jobs +0ms
+  hardhat:core:hre Running task compile:solidity:compile-jobs +0ms
+  hardhat:core:hre Running compile:solidity:compile-jobs's super +0ms
+  hardhat:core:tasks:compile No compilation jobs to compile +0ms
+  hardhat:core:hre Running task compile:solidity:log:nothing-to-compile +0ms
+  hardhat:core:hre Running task typechain:generate-types +0ms
+  hardhat:core:hre Running task compile:solidity:log:compilation-result +0ms
+  hardhat:core:hre Running task compile:remove-obsolete-artifacts +0ms
+  hardhat:core:hre Running task test:get-test-files +3ms
+  hardhat:core:hre Running task test:setup-test-environment +0ms
+  hardhat:core:hre Running task test:show-fork-recommendations +0ms
+  hardhat:core:hre Running task test:run-mocha-tests +0ms
+  hardhat:core:analytics Hit for task sent successfully +377ms
+
+
+  DeFi Yield Aggregator MVP
+    YieldAggregator
+localStrategyId: 0x72e597401d98ca8dffeb18b7e75ff7853426ac469b4b91600d92a49643d59fb1
+idsArray: []
+      1) should add a strategy as owner and emit event
+
+
+  0 passing (37ms)
+  1 failing
+
+  1) DeFi Yield Aggregator MVP
+       YieldAggregator
+         should add a strategy as owner and emit event:
+     AssertionError: expected [] to include '0x72e597401d98ca8dffeb18b7e75ff785342…'
+      at Context.<anonymous> (test/YieldAggregator.test.js:166:25)
+
+
+
+  hardhat:core:hre Running task hhgas:stop +73ms
+·············································································································
+|  Solidity and Network Configuration                                                                       │
+························|·················|···············|·················|································
+|  Solidity: 0.8.20     ·  Optim: true    ·  Runs: 200    ·  viaIR: false   ·     Block: 30,000,000 gas     │
+························|·················|···············|·················|································
+|  Methods                                                                                                  │
+························|·················|···············|·················|················|···············
+|  Contracts / Methods  ·  Min            ·  Max          ·  Avg            ·  # calls       ·  usd (avg)   │
+························|·················|···············|·················|················|···············
+|  YieldAggregator      ·                                                                                   │
+························|·················|···············|·················|················|···············
+|      addStrategy      ·              -  ·            -  ·        320,845  ·             2  ·           -  │
+························|·················|···············|·················|················|···············
+|  Deployments                            ·                                 ·  % of limit    ·              │
+························|·················|···············|·················|················|···············
+|  MockERC20            ·              -  ·            -  ·        527,203  ·         1.8 %  ·           -  │
+························|·················|···············|·················|················|···············
+|  MockYieldStrategy    ·              -  ·            -  ·        321,552  ·         1.1 %  ·           -  │
+························|·················|···············|·················|················|···············
+|  YieldAggregator      ·              -  ·            -  ·      1,071,092  ·         3.6 %  ·           -  │
+························|·················|···············|·················|················|···············
+|  Key                                                                                                      │
+·············································································································
+|  ◯  Execution gas for this method does not include intrinsic gas overhead                                 │
+·············································································································
+|  △  Cost was non-zero but below the precision setting for the currency display (see options)              │
+·············································································································
+|  Toolchain:  hardhat                                                                                      │
+·············································································································
+  hardhat:util:banner-manager Initializing BannerManager +0ms
+  hardhat:util:banner-manager Banner is disabled or no messages available. +78ms
+  hardhat:core:cli Killing Hardhat after successfully running task test +0ms
+rhys@localhost Nomad Fi % npx hardhat test      
+[dotenv@17.2.0] injecting env (0) from .env (tip: 🔐 prevent committing .env to code: https://dotenvx.com/precommit)
+Compiled 1 Solidity file successfully (evm target: paris).
+
+
+  Lock
+    Deployment
+      ✔ Should set the right unlockTime
+      ✔ Should set the right owner
+      ✔ Should receive and store the funds to lock
+      ✔ Should fail if the unlockTime is not in the future
+    Withdrawals
+      Validations
+        ✔ Should revert with the right error if called too soon
+        ✔ Should revert with the right error if called from another account
+        ✔ Shouldn't fail if the unlockTime has arrived and the owner calls it
+      Events
+        ✔ Should emit an event on withdrawals
+      Transfers
+        ✔ Should transfer the funds to the owner
+
+  DeFi Yield Aggregator MVP
+    MockERC20
+      ✔ should have zero total supply initially
+      after minting
+        ✔ should mint tokens to the caller and increase total supply
+        ✔ should transfer tokens and emit Transfer event
+        ✔ should approve and transferFrom correctly, emitting Approval and Transfer events
+    MockYieldStrategy
+      ✔ should be deployed with the correct mock token address
+      ✔ getAPY() should return the hardcoded value
+      ✔ should allow deposit, update mapping, and emit Deposit event
+      ✔ should allow withdraw, update mapping, and emit Withdraw event
+      ✔ should revert withdraw if balance is insufficient
+    YieldAggregator
+      ✔ should set the owner to the deployer
+      ✔ should prevent non-owners from adding a strategy
+      ✔ should add a strategy as owner and emit event
+      ✔ should emit StrategyAdded event when adding
+      ✔ should prevent non-owners from removing a strategy
+      ✔ should set isActive to false and emit event on remove
+      ✔ should return correct strategy info and handle non-existent IDs
+      Conceptual Deposit/Withdrawal (Local Strategy)
+        ✔ should update userDeposits and emit DepositRecorded on deposit
+        ✔ should revert deposit if strategy is not active
+        ✔ should update userDeposits and emit WithdrawalRecorded on withdraw
+        ✔ should revert withdraw if insufficient deposit
+        ✔ should return correct deposit for getUserDeposit
+
+
+  30 passing (283ms)
+
+·············································································································
+|  Solidity and Network Configuration                                                                       │
+························|·················|···············|·················|································
+|  Solidity: 0.8.20     ·  Optim: true    ·  Runs: 200    ·  viaIR: false   ·     Block: 30,000,000 gas     │
+························|·················|···············|·················|································
+|  Methods                                                                                                  │
+························|·················|···············|·················|················|···············
+|  Contracts / Methods  ·  Min            ·  Max          ·  Avg            ·  # calls       ·  usd (avg)   │
+························|·················|···············|·················|················|···············
+|  Lock                 ·                                                                                   │
+························|·················|···············|·················|················|···············
+|      withdraw         ·              -  ·            -  ·         33,820  ·             7  ·           -  │
+························|·················|···············|·················|················|···············
+|  MockERC20            ·                                                                                   │
+························|·················|···············|·················|················|···············
+|      approve          ·         46,371  ·       46,383  ·         46,374  ·             4  ·           -  │
+························|·················|···············|·················|················|···············
+|      mint             ·         33,804  ·       68,004  ·         58,796  ·            13  ·           -  │
+························|·················|···············|·················|················|···············
+|      transfer         ·              -  ·            -  ·         34,520  ·             2  ·           -  │
+························|·················|···············|·················|················|···············
+|      transferFrom     ·              -  ·            -  ·         35,765  ·             2  ·           -  │
+························|·················|···············|·················|················|···············
+|  MockYieldStrategy    ·                                                                                   │
+························|·················|···············|·················|················|···············
+|      deposit          ·              -  ·            -  ·         81,173  ·             3  ·           -  │
+························|·················|···············|·················|················|···············
+|      withdraw         ·              -  ·            -  ·         36,975  ·             2  ·           -  │
+························|·················|···············|·················|················|···············
+|  YieldAggregator      ·                                                                                   │
+························|·················|···············|·················|················|···············
+|      addStrategy      ·        214,018  ·      320,868  ·        312,648  ·            26  ·           -  │
+························|·················|···············|·················|················|···············
+|      deposit          ·              -  ·            -  ·         50,783  ·             4  ·           -  │
+························|·················|···············|·················|················|···············
+|      removeStrategy   ·              -  ·            -  ·         25,657  ·             3  ·           -  │
+························|·················|···············|·················|················|···············
+|      withdraw         ·              -  ·            -  ·         27,600  ·             2  ·           -  │
+························|·················|···············|·················|················|···············
+|  Deployments                            ·                                 ·  % of limit    ·              │
+························|·················|···············|·················|················|···············
+|  Lock                 ·              -  ·            -  ·        204,563  ·         0.7 %  ·           -  │
+························|·················|···············|·················|················|···············
+|  MockERC20            ·              -  ·            -  ·        527,203  ·         1.8 %  ·           -  │
+························|·················|···············|·················|················|···············
+|  MockYieldStrategy    ·        321,540  ·      321,552  ·        321,551  ·         1.1 %  ·           -  │
+························|·················|···············|·················|················|···············
+|  YieldAggregator      ·              -  ·            -  ·      1,115,172  ·         3.7 %  ·           -  │
+························|·················|···············|·················|················|···············
+|  Key                                                                                                      │
+·············································································································
+|  ◯  Execution gas for this method does not include intrinsic gas overhead                                 │
+·············································································································
+|  △  Cost was non-zero but below the precision setting for the currency display (see options)              │
+·············································································································
+|  Toolchain:  hardhat                                                                                      │
+·············································································································
+rhys@localhost Nomad Fi % npx hardhat test
+[dotenv@17.2.0] injecting env (0) from .env (tip: ⚙️  suppress all logs with { quiet: true })
+
+
+  Lock
+    Deployment
+      ✔ Should set the right unlockTime
+      ✔ Should set the right owner
+      ✔ Should receive and store the funds to lock
+      ✔ Should fail if the unlockTime is not in the future
+    Withdrawals
+      Validations
+        ✔ Should revert with the right error if called too soon
+        ✔ Should revert with the right error if called from another account
+        ✔ Shouldn't fail if the unlockTime has arrived and the owner calls it
+      Events
+        ✔ Should emit an event on withdrawals
+      Transfers
+        ✔ Should transfer the funds to the owner
+
+  DeFi Yield Aggregator MVP
+    MockERC20
+      ✔ should have zero total supply initially
+      after minting
+        ✔ should mint tokens to the caller and increase total supply
+        ✔ should transfer tokens and emit Transfer event
+        ✔ should approve and transferFrom correctly, emitting Approval and Transfer events
+    MockYieldStrategy
+      ✔ should be deployed with the correct mock token address
+      ✔ getAPY() should return the hardcoded value
+      ✔ should allow deposit, update mapping, and emit Deposit event
+      ✔ should allow withdraw, update mapping, and emit Withdraw event
+      ✔ should revert withdraw if balance is insufficient
+    YieldAggregator
+      ✔ should set the owner to the deployer
+      ✔ should prevent non-owners from adding a strategy
+      ✔ should add a strategy as owner and emit event
+      ✔ should emit StrategyAdded event when adding
+      ✔ should prevent non-owners from removing a strategy
+      ✔ should set isActive to false and emit event on remove
+      ✔ should return correct strategy info and handle non-existent IDs
+      Conceptual Deposit/Withdrawal (Local Strategy)
+        ✔ should update userDeposits and emit DepositRecorded on deposit
+        ✔ should revert deposit if strategy is not active
+        ✔ should update userDeposits and emit WithdrawalRecorded on withdraw
+        ✔ should revert withdraw if insufficient deposit
+        ✔ should return correct deposit for getUserDeposit
+    Cross-Chain Awareness (Simulated)
+      1) should return correct info for both local and simulated remote strategies
+      ✔ should record conceptual deposit for simulated remote strategy (chainId distinction, not bridging)
+      ✔ should record conceptual withdraw for simulated remote strategy (chainId distinction, not bridging)
+
+
+  32 passing (318ms)
+  1 failing
+
+  1) DeFi Yield Aggregator MVP
+       Cross-Chain Awareness (Simulated)
+         should return correct info for both local and simulated remote strategies:
+
+      AssertionError: expected '0x000000000000000000000000000000000000dEaD' to equal '0x000000000000000000000000000000000000dead'.
+      + expected - actual
+
+      -0x000000000000000000000000000000000000dEaD
+      +0x000000000000000000000000000000000000dead
+      
+      at Context.<anonymous> (test/YieldAggregator.test.js:297:45)
+
+
+
+·············································································································
+|  Solidity and Network Configuration                                                                       │
+························|·················|···············|·················|································
+|  Solidity: 0.8.20     ·  Optim: true    ·  Runs: 200    ·  viaIR: false   ·     Block: 30,000,000 gas     │
+························|·················|···············|·················|································
+|  Methods                                                                                                  │
+························|·················|···············|·················|················|···············
+|  Contracts / Methods  ·  Min            ·  Max          ·  Avg            ·  # calls       ·  usd (avg)   │
+························|·················|···············|·················|················|···············
+|  Lock                 ·                                                                                   │
+························|·················|···············|·················|················|···············
+|      withdraw         ·              -  ·            -  ·         33,820  ·             7  ·           -  │
+························|·················|···············|·················|················|···············
+|  MockERC20            ·                                                                                   │
+························|·················|···············|·················|················|···············
+|      approve          ·         46,371  ·       46,383  ·         46,374  ·             4  ·           -  │
+························|·················|···············|·················|················|···············
+|      mint             ·         33,804  ·       68,004  ·         58,796  ·            13  ·           -  │
+························|·················|···············|·················|················|···············
+|      transfer         ·              -  ·            -  ·         34,520  ·             2  ·           -  │
+························|·················|···············|·················|················|···············
+|      transferFrom     ·              -  ·            -  ·         35,765  ·             2  ·           -  │
+························|·················|···············|·················|················|···············
+|  MockYieldStrategy    ·                                                                                   │
+························|·················|···············|·················|················|···············
+|      deposit          ·              -  ·            -  ·         81,173  ·             3  ·           -  │
+························|·················|···············|·················|················|···············
+|      withdraw         ·              -  ·            -  ·         36,975  ·             2  ·           -  │
+························|·················|···············|·················|················|···············
+|  YieldAggregator      ·                                                                                   │
+························|·················|···············|·················|················|···············
+|      addStrategy      ·        214,018  ·      320,868  ·        312,535  ·            38  ·           -  │
+························|·················|···············|·················|················|···············
+|      deposit          ·              -  ·            -  ·         50,783  ·             7  ·           -  │
+························|·················|···············|·················|················|···············
+|      removeStrategy   ·              -  ·            -  ·         25,657  ·             3  ·           -  │
+························|·················|···············|·················|················|···············
+|      withdraw         ·              -  ·            -  ·         27,600  ·             4  ·           -  │
+························|·················|···············|·················|················|···············
+|  Deployments                            ·                                 ·  % of limit    ·              │
+························|·················|···············|·················|················|···············
+|  Lock                 ·              -  ·            -  ·        204,563  ·         0.7 %  ·           -  │
+························|·················|···············|·················|················|···············
+|  MockERC20            ·              -  ·            -  ·        527,203  ·         1.8 %  ·           -  │
+························|·················|···············|·················|················|···············
+|  MockYieldStrategy    ·        321,540  ·      321,552  ·        321,551  ·         1.1 %  ·           -  │
+························|·················|···············|·················|················|···············
+|  YieldAggregator      ·              -  ·            -  ·      1,115,172  ·         3.7 %  ·           -  │
+························|·················|···············|·················|················|···············
+|  Key                                                                                                      │
+·············································································································
+|  ◯  Execution gas for this method does not include intrinsic gas overhead                                 │
+·············································································································
+|  △  Cost was non-zero but below the precision setting for the currency display (see options)              │
+·············································································································
+|  Toolchain:  hardhat                                                                                      │
+·············································································································
+rhys@localhost Nomad Fi % npx hardhat test
+[dotenv@17.2.0] injecting env (0) from .env (tip: ⚙️  enable debug logging with { debug: true })
+
+
+  Lock
+    Deployment
+      ✔ Should set the right unlockTime
+      ✔ Should set the right owner
+      ✔ Should receive and store the funds to lock
+      ✔ Should fail if the unlockTime is not in the future
+    Withdrawals
+      Validations
+        ✔ Should revert with the right error if called too soon
+        ✔ Should revert with the right error if called from another account
+        ✔ Shouldn't fail if the unlockTime has arrived and the owner calls it
+      Events
+        ✔ Should emit an event on withdrawals
+      Transfers
+        ✔ Should transfer the funds to the owner
+
+  DeFi Yield Aggregator MVP
+    MockERC20
+      ✔ should have zero total supply initially
+      after minting
+        ✔ should mint tokens to the caller and increase total supply
+        ✔ should transfer tokens and emit Transfer event
+        ✔ should approve and transferFrom correctly, emitting Approval and Transfer events
+    MockYieldStrategy
+      ✔ should be deployed with the correct mock token address
+      ✔ getAPY() should return the hardcoded value
+      ✔ should allow deposit, update mapping, and emit Deposit event
+      ✔ should allow withdraw, update mapping, and emit Withdraw event
+      ✔ should revert withdraw if balance is insufficient
+    YieldAggregator
+      ✔ should set the owner to the deployer
+      ✔ should prevent non-owners from adding a strategy
+      ✔ should add a strategy as owner and emit event
+      ✔ should emit StrategyAdded event when adding
+      ✔ should prevent non-owners from removing a strategy
+      ✔ should set isActive to false and emit event on remove
+      ✔ should return correct strategy info and handle non-existent IDs
+      Conceptual Deposit/Withdrawal (Local Strategy)
+        ✔ should update userDeposits and emit DepositRecorded on deposit
+        ✔ should revert deposit if strategy is not active
+        ✔ should update userDeposits and emit WithdrawalRecorded on withdraw
+        ✔ should revert withdraw if insufficient deposit
+        ✔ should return correct deposit for getUserDeposit
+    Cross-Chain Awareness (Simulated)
+      ✔ should return correct info for both local and simulated remote strategies
+      ✔ should record conceptual deposit for simulated remote strategy (chainId distinction, not bridging)
+      ✔ should record conceptual withdraw for simulated remote strategy (chainId distinction, not bridging)
+
+
+  33 passing (318ms)
+
+·············································································································
+|  Solidity and Network Configuration                                                                       │
+························|·················|···············|·················|································
+|  Solidity: 0.8.20     ·  Optim: true    ·  Runs: 200    ·  viaIR: false   ·     Block: 30,000,000 gas     │
+························|·················|···············|·················|································
+|  Methods                                                                                                  │
+························|·················|···············|·················|················|···············
+|  Contracts / Methods  ·  Min            ·  Max          ·  Avg            ·  # calls       ·  usd (avg)   │
+························|·················|···············|·················|················|···············
+|  Lock                 ·                                                                                   │
+························|·················|···············|·················|················|···············
+|      withdraw         ·              -  ·            -  ·         33,820  ·             7  ·           -  │
+························|·················|···············|·················|················|···············
+|  MockERC20            ·                                                                                   │
+························|·················|···············|·················|················|···············
+|      approve          ·         46,371  ·       46,383  ·         46,374  ·             4  ·           -  │
+························|·················|···············|·················|················|···············
+|      mint             ·         33,804  ·       68,004  ·         58,796  ·            13  ·           -  │
+························|·················|···············|·················|················|···············
+|      transfer         ·              -  ·            -  ·         34,520  ·             2  ·           -  │
+························|·················|···············|·················|················|···············
+|      transferFrom     ·              -  ·            -  ·         35,765  ·             2  ·           -  │
+························|·················|···············|·················|················|···············
+|  MockYieldStrategy    ·                                                                                   │
+························|·················|···············|·················|················|···············
+|      deposit          ·              -  ·            -  ·         81,173  ·             3  ·           -  │
+························|·················|···············|·················|················|···············
+|      withdraw         ·              -  ·            -  ·         36,975  ·             2  ·           -  │
+························|·················|···············|·················|················|···············
+|  YieldAggregator      ·                                                                                   │
+························|·················|···············|·················|················|···············
+|      addStrategy      ·        214,018  ·      320,868  ·        312,535  ·            38  ·           -  │
+························|·················|···············|·················|················|···············
+|      deposit          ·              -  ·            -  ·         50,783  ·             7  ·           -  │
+························|·················|···············|·················|················|···············
+|      removeStrategy   ·              -  ·            -  ·         25,657  ·             3  ·           -  │
+························|·················|···············|·················|················|···············
+|      withdraw         ·              -  ·            -  ·         27,600  ·             4  ·           -  │
+························|·················|···············|·················|················|···············
+|  Deployments                            ·                                 ·  % of limit    ·              │
+························|·················|···············|·················|················|···············
+|  Lock                 ·              -  ·            -  ·        204,563  ·         0.7 %  ·           -  │
+························|·················|···············|·················|················|···············
+|  MockERC20            ·              -  ·            -  ·        527,203  ·         1.8 %  ·           -  │
+························|·················|···············|·················|················|···············
+|  MockYieldStrategy    ·        321,540  ·      321,552  ·        321,551  ·         1.1 %  ·           -  │
+························|·················|···············|·················|················|···············
+|  YieldAggregator      ·              -  ·            -  ·      1,115,172  ·         3.7 %  ·           -  │
+························|·················|···············|·················|················|···············
+|  Key                                                                                                      │
+·············································································································
+|  ◯  Execution gas for this method does not include intrinsic gas overhead                                 │
+·············································································································
+|  △  Cost was non-zero but below the precision setting for the currency display (see options)              │
+·············································································································
+|  Toolchain:  hardhat                                                                                      │
+·············································································································
+rhys@localhost Nomad Fi % npx hardhat test --network localhost
+[dotenv@17.2.0] injecting env (0) from .env (tip: ⚙️  load multiple .env files with { path: ['.env.local', '.env'] })
+
+
+  Lock
+    Deployment
+      ✔ Should set the right unlockTime (43ms)
+      ✔ Should set the right owner
+      ✔ Should receive and store the funds to lock
+      ✔ Should fail if the unlockTime is not in the future
+    Withdrawals
+      Validations
+        ✔ Should revert with the right error if called too soon
+        ✔ Should revert with the right error if called from another account
+        ✔ Shouldn't fail if the unlockTime has arrived and the owner calls it
+      Events
+        ✔ Should emit an event on withdrawals
+      Transfers
+        ✔ Should transfer the funds to the owner
+
+  DeFi Yield Aggregator MVP
+    MockERC20
+      ✔ should have zero total supply initially
+      after minting
+        ✔ should mint tokens to the caller and increase total supply
+        ✔ should transfer tokens and emit Transfer event
+        ✔ should approve and transferFrom correctly, emitting Approval and Transfer events
+    MockYieldStrategy
+      ✔ should be deployed with the correct mock token address
+      ✔ getAPY() should return the hardcoded value
+      ✔ should allow deposit, update mapping, and emit Deposit event
+      ✔ should allow withdraw, update mapping, and emit Withdraw event
+      ✔ should revert withdraw if balance is insufficient
+    YieldAggregator
+      ✔ should set the owner to the deployer
+      ✔ should prevent non-owners from adding a strategy
+      ✔ should add a strategy as owner and emit event
+      ✔ should emit StrategyAdded event when adding
+      ✔ should prevent non-owners from removing a strategy
+      ✔ should set isActive to false and emit event on remove
+      ✔ should return correct strategy info and handle non-existent IDs
+      Conceptual Deposit/Withdrawal (Local Strategy)
+        ✔ should update userDeposits and emit DepositRecorded on deposit
+        ✔ should revert deposit if strategy is not active
+        ✔ should update userDeposits and emit WithdrawalRecorded on withdraw
+        ✔ should revert withdraw if insufficient deposit
+        ✔ should return correct deposit for getUserDeposit
+    Cross-Chain Awareness (Simulated)
+      ✔ should return correct info for both local and simulated remote strategies
+      ✔ should record conceptual deposit for simulated remote strategy (chainId distinction, not bridging)
+      ✔ should record conceptual withdraw for simulated remote strategy (chainId distinction, not bridging)
+
+
+  33 passing (755ms)
+
+·············································································································
+|  Solidity and Network Configuration                                                                       │
+························|·················|···············|·················|································
+|  Solidity: 0.8.20     ·  Optim: true    ·  Runs: 200    ·  viaIR: false   ·     Block: 30,000,000 gas     │
+························|·················|···············|·················|································
+|  Methods                                                                                                  │
+························|·················|···············|·················|················|···············
+|  Contracts / Methods  ·  Min            ·  Max          ·  Avg            ·  # calls       ·  usd (avg)   │
+························|·················|···············|·················|················|···············
+|  Lock                 ·                                                                                   │
+························|·················|···············|·················|················|···············
+|      withdraw         ·              -  ·            -  ·         33,820  ·             7  ·           -  │
+························|·················|···············|·················|················|···············
+|  MockERC20            ·                                                                                   │
+························|·················|···············|·················|················|···············
+|      approve          ·         46,371  ·       46,383  ·         46,374  ·             4  ·           -  │
+························|·················|···············|·················|················|···············
+|      mint             ·         33,804  ·       68,004  ·         58,796  ·            13  ·           -  │
+························|·················|···············|·················|················|···············
+|      transfer         ·              -  ·            -  ·         34,520  ·             2  ·           -  │
+························|·················|···············|·················|················|···············
+|      transferFrom     ·              -  ·            -  ·         35,765  ·             2  ·           -  │
+························|·················|···············|·················|················|···············
+|  MockYieldStrategy    ·                                                                                   │
+························|·················|···············|·················|················|···············
+|      deposit          ·              -  ·            -  ·         81,173  ·             3  ·           -  │
+························|·················|···············|·················|················|···············
+|      withdraw         ·              -  ·            -  ·         36,975  ·             2  ·           -  │
+························|·················|···············|·················|················|···············
+|  YieldAggregator      ·                                                                                   │
+························|·················|···············|·················|················|···············
+|      addStrategy      ·        214,018  ·      320,868  ·        312,535  ·            38  ·           -  │
+························|·················|···············|·················|················|···············
+|      deposit          ·              -  ·            -  ·         50,783  ·             7  ·           -  │
+························|·················|···············|·················|················|···············
+|      removeStrategy   ·              -  ·            -  ·         25,657  ·             3  ·           -  │
+························|·················|···············|·················|················|···············
+|      withdraw         ·              -  ·            -  ·         27,600  ·             4  ·           -  │
+························|·················|···············|·················|················|···············
+|  Deployments                            ·                                 ·  % of limit    ·              │
+························|·················|···············|·················|················|···············
+|  Lock                 ·              -  ·            -  ·        204,563  ·         0.7 %  ·           -  │
+························|·················|···············|·················|················|···············
+|  MockERC20            ·              -  ·            -  ·        527,203  ·         1.8 %  ·           -  │
+························|·················|···············|·················|················|···············
+|  MockYieldStrategy    ·        321,540  ·      321,552  ·        321,551  ·         1.1 %  ·           -  │
+························|·················|···············|·················|················|···············
+|  YieldAggregator      ·              -  ·            -  ·      1,115,172  ·         3.7 %  ·           -  │
+························|·················|···············|·················|················|···············
+|  Key                                                                                                      │
+·············································································································
+|  ◯  Execution gas for this method does not include intrinsic gas overhead                                 │
+·············································································································
+|  △  Cost was non-zero but below the precision setting for the currency display (see options)              │
+·············································································································
+|  Toolchain:  hardhat                                                                                      │
+·············································································································
+rhys@localhost Nomad Fi % 
