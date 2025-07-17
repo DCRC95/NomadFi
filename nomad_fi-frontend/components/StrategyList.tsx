@@ -1,10 +1,11 @@
 "use client";
 import React, { useEffect, useState } from "react";
-import { useReadContract, useChainId, useAccount, useWriteContract, useSwitchChain } from "wagmi";
+import { useReadContract, useChainId, useAccount, useWriteContract, useSwitchChain, useBalance, useWaitForTransactionReceipt } from "wagmi";
 import { YIELD_AGGREGATOR_ABI, MOCK_YIELD_STRATEGY_ABI, CONTRACT_ADDRESSES, STATIC_PROVIDERS } from "../src/lib/constants";
 import { calculateRiskCategory } from "../src/lib/riskUtils";
 import { hardhat, polygonAmoy, sepolia } from "../pages/_app";
 import { ethers } from "ethers";
+import MockERC20Abi from "../src/abi/MockERC20.json";
 
 const CHAIN_NAMES: Record<number, string> = {
   [hardhat.id]: hardhat.name,
@@ -151,19 +152,144 @@ function StrategyCardWithFilter({ strategy, filterRiskCategories }: { strategy: 
   const connectedChainId = useChainId();
   const chainIdNum = Number(strategy.chainId);
   const aggregatorAddress = CONTRACT_ADDRESSES[chainIdNum]?.YieldAggregator as `0x${string}`;
+  const mockErc20Address = CONTRACT_ADDRESSES[chainIdNum]?.MockERC20 as `0x${string}`;
   const strategyId = strategy.id;
   const isOnCorrectNetwork = Number(connectedChainId) === chainIdNum;
 
-  // Use info directly from strategy prop
-  const info = strategy;
+  // Fetch user's MockERC20 balance for the strategy's chain
+  const { data: mockTokenBalance, isLoading: isBalanceLoading, error: balanceError } = useBalance({
+    address: userAddress,
+    token: mockErc20Address,
+    chainId: chainIdNum,
+  });
+
+  // Fetch user's deposited balance in the aggregator for this strategy
+  const { data: depositedAmount, isLoading: isDepositLoading, error: depositedAmountError } = useReadContract({
+    address: aggregatorAddress,
+    abi: YIELD_AGGREGATOR_ABI,
+    functionName: "userDeposits",
+    args: [userAddress, mockErc20Address, strategyId],
+  });
+
+  // Approval logic
+  const { data: allowance, refetch: refetchAllowance, isLoading: isAllowanceLoading } = useReadContract({
+    abi: MockERC20Abi.abi,
+    address: mockErc20Address,
+    functionName: "allowance",
+    args: [userAddress, aggregatorAddress],
+  });
+
+  const { writeContract: writeApprove, data: approveHash, isPending: isApproving, isSuccess: isApproveSuccess, error: approveError } = useWriteContract();
+  const { isLoading: isConfirmingApproval, isSuccess: isApprovalConfirmed } = useWaitForTransactionReceipt({
+    hash: approveHash,
+  });
+
+  // Deposit/Withdraw state and logic
+  const [showForm, setShowForm] = React.useState<"deposit" | "withdraw" | null>(null);
+  const [amount, setAmount] = React.useState("");
+  const [txState, setTxState] = React.useState<"idle" | "loading" | "success" | "error">("idle");
+  const [txError, setTxError] = React.useState<string | null>(null);
+  const { writeContractAsync, writeContract } = useWriteContract();
+
+  // Deposit transaction logic
+  const { writeContract: writeDeposit, data: depositHash, isPending: isDepositing, isSuccess: isDepositSuccess, error: depositError } = useWriteContract();
+  const { isLoading: isConfirmingDeposit, isSuccess: isDepositConfirmed } = useWaitForTransactionReceipt({
+    hash: depositHash,
+  });
+
+  // Withdraw transaction logic
+  const [withdrawAmount, setWithdrawAmount] = React.useState("");
+  const { writeContract: writeWithdraw, data: withdrawHash, isPending: isWithdrawing, isSuccess: isWithdrawSuccess, error: withdrawError } = useWriteContract();
+  const { isLoading: isConfirmingWithdraw, isSuccess: isWithdrawConfirmed } = useWaitForTransactionReceipt({
+    hash: withdrawHash,
+  });
+
+  // Refetch hooks for balance and deposited amount
+  const { refetch: refetchMockTokenBalance } = useBalance({
+    address: userAddress,
+    token: mockErc20Address,
+    chainId: chainIdNum,
+  });
+  const { refetch: refetchDepositedAmount } = useReadContract({
+    address: aggregatorAddress,
+    abi: YIELD_AGGREGATOR_ABI,
+    functionName: "userDeposits",
+    args: [userAddress, mockErc20Address, strategyId],
+  });
+
+  // Deposit handler
+  const handleDeposit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setTxState("loading");
+    setTxError(null);
+    let amountBigInt: bigint;
+    try {
+      if (!amount || isNaN(Number(amount))) throw new Error("Invalid amount");
+      amountBigInt = ethers.parseUnits(amount, 18);
+    } catch (parseErr: any) {
+      setTxState("error");
+      setTxError("Invalid amount format");
+      return;
+    }
+    try {
+      await writeDeposit({
+        address: aggregatorAddress,
+        abi: YIELD_AGGREGATOR_ABI,
+        functionName: "deposit",
+        args: [mockErc20Address, amountBigInt, strategyId],
+      });
+    } catch (err: any) {
+      setTxState("error");
+      setTxError(err?.message || "Transaction failed");
+      return;
+    }
+    setTxState("success");
+    setAmount("");
+    setShowForm(null);
+    // Refetch balances after deposit
+    refetchMockTokenBalance && refetchMockTokenBalance();
+    refetchDepositedAmount && refetchDepositedAmount();
+  };
+
+  // Withdraw handler
+  const handleWithdraw = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setTxState("loading");
+    setTxError(null);
+    let withdrawAmountBigInt: bigint;
+    try {
+      if (!withdrawAmount || isNaN(Number(withdrawAmount))) throw new Error("Invalid amount");
+      withdrawAmountBigInt = ethers.parseUnits(withdrawAmount, 18);
+    } catch (parseErr: any) {
+      setTxState("error");
+      setTxError("Invalid amount format");
+      return;
+    }
+    try {
+      await writeWithdraw({
+        address: aggregatorAddress,
+        abi: YIELD_AGGREGATOR_ABI,
+        functionName: "withdraw",
+        args: [mockErc20Address, withdrawAmountBigInt, strategyId],
+      });
+    } catch (err: any) {
+      setTxState("error");
+      setTxError(err?.message || "Transaction failed");
+      return;
+    }
+    setTxState("success");
+    setWithdrawAmount("");
+    setShowForm(null);
+    // Refetch balances after withdrawal
+    refetchMockTokenBalance && refetchMockTokenBalance();
+    refetchDepositedAmount && refetchDepositedAmount();
+  };
 
   // Calculate risk category
   let riskCategory = "Unknown";
   try {
-    riskCategory = calculateRiskCategory(info);
+    riskCategory = calculateRiskCategory(strategy);
   } catch {}
-
-  const isFiltered = !filterRiskCategories.includes(riskCategory);
 
   const riskColor =
     riskCategory === "Very Low" || riskCategory === "Low"
@@ -174,68 +300,83 @@ function StrategyCardWithFilter({ strategy, filterRiskCategories }: { strategy: 
       ? "text-red-600 bg-red-100 border-red-300"
       : "text-gray-500 bg-gray-100 border-gray-300";
 
-  // User deposit fetching
-  const [refreshKey, setRefreshKey] = React.useState(0);
-  const { data: userDeposit, refetch: refetchUserDeposit } = useReadContract({
-    address: aggregatorAddress,
-    abi: YIELD_AGGREGATOR_ABI,
-    functionName: "getUserDeposit",
-    args: [strategyId, userAddress || "0x0000000000000000000000000000000000000000"],
-    query: { enabled: !!userAddress },
-  });
+  // Parse amount to BigInt for comparison
+  let parsedAmount: bigint = BigInt(0);
+  try {
+    parsedAmount = amount ? ethers.parseUnits(amount, 18) : BigInt(0);
+  } catch {}
+  const needsApproval =
+    allowance != null &&
+    (typeof allowance === "string" || typeof allowance === "number" || typeof allowance === "bigint") &&
+    parsedAmount > 0 &&
+    BigInt(allowance) < parsedAmount;
 
-  // Deposit/Withdraw state and logic
-  const [showForm, setShowForm] = React.useState<"deposit" | "withdraw" | null>(null);
-  const [amount, setAmount] = React.useState("");
-  const [txState, setTxState] = React.useState<"idle" | "loading" | "success" | "error">("idle");
-  const [txError, setTxError] = React.useState<string | null>(null);
-  const { writeContractAsync } = useWriteContract();
-  const { chains, switchChain, isPending: isSwitching, error: switchError } = useSwitchChain();
-  const [switchSuccess, setSwitchSuccess] = React.useState<string | null>(null);
-  const [switchErrorMsg, setSwitchErrorMsg] = React.useState<string | null>(null);
+  // Parse withdrawAmount to BigInt for comparison
+  let withdrawAmountBigInt: bigint = BigInt(0);
+  try {
+    withdrawAmountBigInt = withdrawAmount ? ethers.parseUnits(withdrawAmount, 18) : BigInt(0);
+  } catch {}
+  const depositedAmountNum =
+    (typeof depositedAmount === "bigint" || typeof depositedAmount === "number" || typeof depositedAmount === "string")
+      ? BigInt(depositedAmount)
+      : BigInt(0);
+  const disableWithdraw = !userAddress || !withdrawAmount || Number(withdrawAmount) <= 0 || withdrawAmountBigInt > depositedAmountNum || isWithdrawing || isConfirmingWithdraw;
 
-  // Helper: handle deposit/withdraw on current chain
-  async function handleTxSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    setTxState("loading");
-    setTxError(null);
+  // Approve handler
+  const handleApprove = async () => {
     try {
-      const fn = showForm === "deposit" ? "deposit" : "withdraw";
-      // Convert amount to BigInt using ethers.parseUnits (18 decimals)
-      let amountBigInt: bigint;
-      try {
-        if (!amount || isNaN(Number(amount))) throw new Error("Invalid amount");
-        amountBigInt = ethers.parseUnits(amount, 18);
-      } catch (parseErr: any) {
-        setTxState("error");
-        setTxError("Invalid amount format");
-        return;
-      }
-      await writeContractAsync({
-        address: aggregatorAddress,
-        abi: YIELD_AGGREGATOR_ABI,
-        functionName: fn,
-        args: [strategyId, amountBigInt],
+      await writeApprove({
+        abi: MockERC20Abi.abi,
+        address: mockErc20Address,
+        functionName: "approve",
+        args: [aggregatorAddress, ethers.MaxUint256],
       });
-      if (typeof refetchUserDeposit === "function") {
-        await refetchUserDeposit();
-      } else {
-        setRefreshKey((k) => k + 1);
-      }
-      setTxState("success");
-      setAmount("");
-      setShowForm(null);
-    } catch (err: any) {
-      setTxState("error");
-      setTxError(err?.message || "Transaction failed");
+    } catch (err) {
+      // error handled by wagmi
     }
-  }
+  };
 
   // UI for deposit/withdraw form
   function renderForm() {
-    if (isOnCorrectNetwork) {
-      return (
-        <form className="flex flex-col gap-2 mb-2" onSubmit={handleTxSubmit}>
+    return (
+      <>
+        {/* Wallet balance display */}
+        <div className="mb-2 text-sm">
+          <span className="font-medium">Wallet Balance:</span>{" "}
+          {isBalanceLoading && <span className="text-gray-400">Loading...</span>}
+          {balanceError && <span className="text-red-400">Error</span>}
+          {mockTokenBalance && (
+            <span className="text-blue-700 font-mono">{mockTokenBalance.formatted} {mockTokenBalance.symbol}</span>
+          )}
+        </div>
+        {/* User's deposited balance display */}
+        <div className="mb-2 text-sm">
+          <span className="font-medium">Deposited in Aggregator:</span>{" "}
+          {isDepositLoading && <span className="text-gray-400">Loading...</span>}
+          {depositedAmountError && <span className="text-red-400">Error</span>}
+          {(typeof depositedAmount === "string" || typeof depositedAmount === "number" || typeof depositedAmount === "bigint") && (
+            <span className="text-green-700 font-mono">{ethers.formatUnits(depositedAmount, 17)}</span>
+          )}
+        </div>
+        {/* Approval UI */}
+        <div className="mb-2 text-sm">
+          {isAllowanceLoading ? (
+            <span className="text-gray-400">Checking allowance...</span>
+          ) : needsApproval ? (
+            <button
+              type="button"
+              onClick={handleApprove}
+              disabled={isApproving || isConfirmingApproval}
+              className="px-3 py-1 bg-yellow-500 text-white rounded"
+            >
+              {isApproving || isConfirmingApproval ? "Approving..." : "Approve Token"}
+            </button>
+          ) : null}
+          {isApproveSuccess && <span className="text-green-600 ml-2">Approval transaction sent!</span>}
+          {approveError && <span className="text-red-600 ml-2">{approveError.message}</span>}
+        </div>
+        {/* Deposit form */}
+        <form className="flex flex-col gap-2 mb-2" onSubmit={handleDeposit}>
           <label className="text-sm font-medium">
             Amount
             <input
@@ -243,7 +384,7 @@ function StrategyCardWithFilter({ strategy, filterRiskCategories }: { strategy: 
               min="0"
               step="any"
               value={amount}
-              onChange={e => setAmount(e.target.value)}
+              onChange={e => setAmount(String(e.target.value))}
               className="block w-full mt-1 px-2 py-1 border rounded focus:outline-none focus:ring focus:border-blue-400"
               placeholder="Enter amount"
             />
@@ -252,13 +393,11 @@ function StrategyCardWithFilter({ strategy, filterRiskCategories }: { strategy: 
             <button
               type="submit"
               className="px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700"
-              disabled={!amount || Number(amount) <= 0 || txState === "loading"}
+              disabled={!userAddress || !amount || Number(amount) <= 0 || needsApproval || isDepositing || isConfirmingDeposit}
             >
-              {txState === "loading"
-                ? "Confirming..."
-                : showForm === "deposit"
-                ? "Confirm Deposit"
-                : "Confirm Withdraw"}
+              {isDepositing || isConfirmingDeposit
+                ? "Depositing..."
+                : "Confirm Deposit"}
             </button>
             <button
               type="button"
@@ -273,6 +412,8 @@ function StrategyCardWithFilter({ strategy, filterRiskCategories }: { strategy: 
               Cancel
             </button>
           </div>
+          {isDepositSuccess && <div className="text-green-600 text-sm mt-1">Deposit transaction sent!</div>}
+          {depositError && <div className="text-red-600 text-sm mt-1">{depositError.message}</div>}
           {txState === "success" && (
             <div className="text-green-600 text-sm mt-1">Success!</div>
           )}
@@ -280,94 +421,75 @@ function StrategyCardWithFilter({ strategy, filterRiskCategories }: { strategy: 
             <div className="text-red-600 text-sm mt-1">{txError}</div>
           )}
         </form>
-      );
-    }
-    // If not on the correct chain, show conceptual/cross-chain UI
-    return (
-      <div className="flex flex-col gap-2 mb-2 border border-yellow-300 bg-yellow-50 p-3 rounded">
-        <div className="text-yellow-800 font-semibold mb-1">
-          To interact with this strategy, please switch your wallet network to {CHAIN_NAMES[Number(strategy.chainId)] || strategy.chainId} (Chain ID: {strategy.chainId}).
-        </div>
-        <button
-          className="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 w-fit"
-          onClick={async () => {
-            setSwitchSuccess(null);
-            setSwitchErrorMsg(null);
-            const chainIdNumber = typeof strategy.chainId === "bigint" ? Number(strategy.chainId) : strategy.chainId;
-            const chainObj = [hardhat, polygonAmoy, sepolia].find(c => c.id === chainIdNumber);
-            if (chainObj) {
-              try {
-                await switchChain({ chainId: chainObj.id });
-                setSwitchSuccess(`Successfully requested switch to ${chainObj.name}`);
-              } catch (err: any) {
-                setSwitchErrorMsg(err?.message || "SwitchChain error");
-              }
-            } else {
-              setSwitchErrorMsg(`Chain object not found for chainId ${strategy.chainId}`);
-            }
-          }}
-          disabled={isSwitching}
-        >
-          {isSwitching ? "Switching..." : `Switch Network to ${CHAIN_NAMES[Number(strategy.chainId)] || strategy.chainId}`}
-        </button>
-        {switchSuccess && <div className="text-green-600 text-sm mt-1">{switchSuccess}</div>}
-        {switchErrorMsg && <div className="text-red-600 text-sm mt-1">{switchErrorMsg}</div>}
-        {switchError && <div className="text-red-600 text-sm">{switchError.message}</div>}
-      </div>
+        {/* Withdraw form */}
+        <form className="flex flex-col gap-2 mb-2" onSubmit={handleWithdraw}>
+          <label className="text-sm font-medium">
+            Withdraw Amount
+            <input
+              type="number"
+              min="0"
+              step="any"
+              value={withdrawAmount}
+              onChange={e => setWithdrawAmount(String(e.target.value))}
+              className="block w-full mt-1 px-2 py-1 border rounded focus:outline-none focus:ring focus:border-blue-400"
+              placeholder="Enter amount to withdraw"
+            />
+          </label>
+          <div className="flex gap-2">
+            <button
+              type="submit"
+              className="px-3 py-1 bg-gray-700 text-white rounded hover:bg-gray-800"
+              disabled={disableWithdraw}
+            >
+              {isWithdrawing || isConfirmingWithdraw
+                ? "Withdrawing..."
+                : "Confirm Withdraw"}
+            </button>
+            <button
+              type="button"
+              className="px-3 py-1 bg-gray-300 text-gray-700 rounded hover:bg-gray-400"
+              onClick={() => {
+                setShowForm(null);
+                setTxState("idle");
+                setTxError(null);
+                setWithdrawAmount("");
+              }}
+            >
+              Cancel
+            </button>
+          </div>
+          {isWithdrawSuccess && <div className="text-green-600 text-sm mt-1">Withdraw transaction sent!</div>}
+          {withdrawError && <div className="text-red-600 text-sm mt-1">{withdrawError.message}</div>}
+          {txState === "success" && (
+            <div className="text-green-600 text-sm mt-1">Success!</div>
+          )}
+          {txState === "error" && (
+            <div className="text-red-600 text-sm mt-1">{txError}</div>
+          )}
+        </form>
+      </>
     );
   }
 
-  if (!info || typeof info !== "object" || !("name" in info)) return <div className="p-4 text-center text-red-400">No strategy info found for {strategy.id} on chain {strategy.chainId}. Aggregator address: {String(aggregatorAddress)}</div>;
+  if (!strategy || typeof strategy !== "object" || !("name" in strategy)) return <div className="p-4 text-center text-red-400">No strategy info found for {strategy.id} on chain {strategy.chainId}. Aggregator address: {String(aggregatorAddress)}</div>;
 
   return (
-    <div className={`bg-white rounded-lg shadow p-6 border ${isFiltered ? 'opacity-50 pointer-events-none' : ''}`}>
+    <div className={`bg-white rounded-lg shadow p-6 border`}>
       <div className="flex items-center justify-between mb-2">
-        <div className="text-lg font-semibold">{info.name}</div>
+        <div className="text-lg font-semibold">{strategy.name}</div>
         <span className={`px-3 py-1 rounded-full text-sm font-bold border ${riskColor}`}>{riskCategory} Risk</span>
       </div>
-      <div className="text-gray-600 mb-1">{info.description}</div>
+      <div className="text-gray-600 mb-1">{strategy.description}</div>
       <div className="text-sm text-gray-500 mb-1">
-        <span className="font-medium">Chain:</span> {CHAIN_NAMES[Number(info.chainId)] || info.chainId}
+        <span className="font-medium">Chain:</span> {CHAIN_NAMES[Number(strategy.chainId)] || strategy.chainId}
       </div>
       <div className="text-sm text-gray-500 mb-1">
-        <span className="font-medium">APY:</span> <span className="text-green-600 font-semibold">{info.apy ? `${Number(info.apy) / 100}%` : 'N/A'}</span>
+        <span className="font-medium">APY:</span> <span className="text-green-600 font-semibold">{strategy.apy ? `${Number(strategy.apy) / 100}%` : 'N/A'}</span>
       </div>
       <div className="text-xs text-gray-400 mb-2">
-        <span className="font-medium">Address:</span> {info.strategyAddress}
+        <span className="font-medium">Address:</span> {strategy.strategyAddress}
       </div>
-      <div className="flex items-center gap-4 mb-2">
-        <div className="text-sm font-medium">Your Deposit:</div>
-        <div className="text-sm text-blue-700 font-mono">{userDeposit ? userDeposit.toString() : "0"}</div>
-      </div>
-      <div className="flex gap-2 mb-2">
-        <button
-          className={`px-3 py-1 ${showForm === "deposit" ? "bg-blue-200" : "bg-blue-100"} text-blue-700 rounded hover:bg-blue-200 border border-blue-300`}
-          onClick={() => {
-            setShowForm(showForm === "deposit" ? null : "deposit");
-            setTxError(null);
-            if (showForm !== "deposit") setTxState("idle");
-          }}
-        >
-          Deposit
-        </button>
-        <button
-          className={`px-3 py-1 ${showForm === "withdraw" ? "bg-gray-200" : "bg-gray-100"} text-gray-700 rounded hover:bg-gray-200 border border-gray-300`}
-          onClick={() => {
-            setShowForm(showForm === "withdraw" ? null : "withdraw");
-            setTxError(null);
-            if (showForm !== "withdraw") setTxState("idle");
-          }}
-        >
-          Withdraw
-        </button>
-      </div>
-      {showForm === null && txState === "success" && (
-        <div className="text-green-600 text-sm mb-2">Success!</div>
-      )}
-      {showForm && renderForm()}
-      {isFiltered && (
-        <div className="absolute top-2 right-2 bg-yellow-200 text-yellow-800 px-2 py-1 rounded text-xs font-bold">Filtered</div>
-      )}
+      {renderForm()}
     </div>
   );
 } 
