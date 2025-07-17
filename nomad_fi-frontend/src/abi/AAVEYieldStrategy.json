@@ -1,0 +1,22 @@
+{
+  "abi": [
+    {
+      "inputs": [
+        { "internalType": "address", "name": "_aaveAddressesProvider", "type": "address" },
+        { "internalType": "address", "name": "_underlyingToken", "type": "address" },
+        { "internalType": "address", "name": "_aToken", "type": "address" }
+      ],
+      "stateMutability": "nonpayable",
+      "type": "constructor"
+    },
+    { "inputs": [], "name": "AAVE_ADDRESSES_PROVIDER", "outputs": [ { "internalType": "contract IAaveV3LendingPoolAddressesProvider", "name": "", "type": "address" } ], "stateMutability": "view", "type": "function" },
+    { "inputs": [], "name": "AAVE_DATA_PROVIDER", "outputs": [ { "internalType": "contract IAaveV3AaveProtocolDataProvider", "name": "", "type": "address" } ], "stateMutability": "view", "type": "function" },
+    { "inputs": [], "name": "AAVE_LENDING_POOL", "outputs": [ { "internalType": "contract IAaveV3LendingPool", "name": "", "type": "address" } ], "stateMutability": "view", "type": "function" },
+    { "inputs": [], "name": "aToken", "outputs": [ { "internalType": "contract IERC20", "name": "", "type": "address" } ], "stateMutability": "view", "type": "function" },
+    { "inputs": [], "name": "apy", "outputs": [ { "internalType": "uint256", "name": "", "type": "uint256" } ], "stateMutability": "view", "type": "function" },
+    { "inputs": [ { "internalType": "uint256", "name": "amount", "type": "uint256" } ], "name": "depositToProtocol", "outputs": [ { "internalType": "bool", "name": "success", "type": "bool" } ], "stateMutability": "nonpayable", "type": "function" },
+    { "inputs": [], "name": "getCurrentBalance", "outputs": [ { "internalType": "uint256", "name": "", "type": "uint256" } ], "stateMutability": "view", "type": "function" },
+    { "inputs": [], "name": "underlyingToken", "outputs": [ { "internalType": "contract IERC20", "name": "", "type": "address" } ], "stateMutability": "view", "type": "function" },
+    { "inputs": [ { "internalType": "uint256", "name": "amount", "type": "uint256" }, { "internalType": "address", "name": "to", "type": "address" } ], "name": "withdrawFromProtocol", "outputs": [ { "internalType": "bool", "name": "success", "type": "bool" } ], "stateMutability": "nonpayable", "type": "function" }
+  ]
+} 

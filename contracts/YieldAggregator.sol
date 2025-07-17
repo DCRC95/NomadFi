@@ -3,87 +3,143 @@ pragma solidity ^0.8.20;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import "contracts/interfaces/IAAVEYieldStrategy.sol";
 
 contract YieldAggregator is Ownable, ReentrancyGuard {
-    constructor() Ownable(msg.sender) {}
-    struct YieldStrategy {
+    using SafeERC20 for IERC20;
+
+    enum StrategyType { Mock, Aave }
+
+    struct StrategyInfo {
+        address tokenAddress;
         address strategyAddress;
-        uint256 chainId;
         string name;
-        string description;
-        uint256 baseRiskScore;
+        StrategyType strategyType;
         bool isActive;
-        string offchainMetadataURI;
     }
 
-    mapping(bytes32 => YieldStrategy) public strategies;
-    bytes32[] public strategyIds;
-    mapping(address => mapping(bytes32 => uint256)) public userDeposits;
+    mapping(uint256 => StrategyInfo) public strategies;
+    uint256[] public strategyIds;
+    // user => token => strategyId => amount
+    mapping(address => mapping(address => mapping(uint256 => uint256))) public userDeposits;
+    // Whitelisted tokens
+    mapping(address => bool) public isSupportedToken;
 
+    event TokenSupported(address indexed tokenAddress);
+    event TokenUnSupported(address indexed tokenAddress);
     event StrategyAdded(
-        bytes32 indexed strategyId,
-        address indexed strategyAddress,
-        uint256 indexed chainId,
-        string name
+        uint256 indexed id,
+        address indexed tokenAddress,
+        address strategyAddress,
+        string name,
+        StrategyType strategyType
     );
-    event StrategyRemoved(bytes32 indexed strategyId);
-    event DepositRecorded(address indexed user, bytes32 indexed strategyId, uint256 amount);
-    event WithdrawalRecorded(address indexed user, bytes32 indexed strategyId, uint256 amount);
+    event StrategyRemoved(uint256 indexed strategyId);
+    event Deposit(address indexed user, address indexed token, uint256 amount, uint256 indexed strategyId, uint256 timestamp);
+    event Withdrawal(address indexed user, address indexed token, uint256 amount, uint256 indexed strategyId, uint256 timestamp);
+
+    constructor(address[] memory _initialSupportedTokens) Ownable(msg.sender) {
+        for (uint256 i = 0; i < _initialSupportedTokens.length; i++) {
+            isSupportedToken[_initialSupportedTokens[i]] = true;
+            emit TokenSupported(_initialSupportedTokens[i]);
+        }
+    }
+
+    function addSupportedToken(address _tokenAddress) public onlyOwner {
+        isSupportedToken[_tokenAddress] = true;
+        emit TokenSupported(_tokenAddress);
+    }
+
+    function removeSupportedToken(address _tokenAddress) public onlyOwner {
+        isSupportedToken[_tokenAddress] = false;
+        emit TokenUnSupported(_tokenAddress);
+    }
 
     function addStrategy(
+        uint256 _id,
+        address _tokenAddress,
         address _strategyAddress,
-        uint256 _chainId,
         string memory _name,
-        string memory _description,
-        uint256 _baseRiskScore,
-        string memory _offchainMetadataURI
-    ) external onlyOwner {
-        bytes32 strategyId = keccak256(abi.encodePacked(_strategyAddress, _chainId));
-        require(strategies[strategyId].strategyAddress == address(0), "Strategy already exists");
-        strategies[strategyId] = YieldStrategy({
+        StrategyType _strategyType
+    ) public onlyOwner {
+        strategies[_id] = StrategyInfo({
+            tokenAddress: _tokenAddress,
             strategyAddress: _strategyAddress,
-            chainId: _chainId,
             name: _name,
-            description: _description,
-            baseRiskScore: _baseRiskScore,
-            isActive: true,
-            offchainMetadataURI: _offchainMetadataURI
+            strategyType: _strategyType,
+            isActive: true
         });
-        strategyIds.push(strategyId);
-        emit StrategyAdded(strategyId, _strategyAddress, _chainId, _name);
+        strategyIds.push(_id);
+        emit StrategyAdded(_id, _tokenAddress, _strategyAddress, _name, _strategyType);
     }
 
-    function removeStrategy(bytes32 _strategyId) external onlyOwner {
+    function removeStrategy(uint256 _strategyId) external onlyOwner {
         require(strategies[_strategyId].isActive, "Strategy not active");
         strategies[_strategyId].isActive = false;
         emit StrategyRemoved(_strategyId);
     }
 
-    function getStrategyInfo(bytes32 _strategyId) external view returns (YieldStrategy memory) {
+    function getStrategyInfo(uint256 _strategyId) external view returns (StrategyInfo memory) {
         return strategies[_strategyId];
     }
 
-    /// @notice Conceptual deposit for MVP. This does NOT transfer or bridge assets; it only records the deposit for demonstration purposes.
-    function deposit(bytes32 _strategyId, uint256 _amount) external nonReentrant {
+    function getStrategyAPY(uint256 _strategyId) public view returns (uint256) {
+        StrategyInfo storage strategyInfo = strategies[_strategyId];
+        if (strategyInfo.strategyType == StrategyType.Aave) {
+            return IAAVEYieldStrategy(strategyInfo.strategyAddress).apy();
+        } else if (strategyInfo.strategyType == StrategyType.Mock) {
+            // Assuming IMockYieldStrategy is defined elsewhere or will be added
+            // For now, returning a placeholder or throwing an error if not implemented
+            // revert("Unknown strategy type"); // Original code had this line commented out
+            return 0; // Placeholder for Mock strategy APY
+        } else {
+            revert("Unknown strategy type");
+        }
+    }
+
+    /// @notice Secure ERC-20 deposit. Transfers tokens and records deposit.
+    function deposit(address _tokenAddress, uint256 _amount, uint256 _strategyId) public nonReentrant {
         require(strategies[_strategyId].isActive, "Strategy not active");
         require(_amount > 0, "Amount must be greater than zero");
-        userDeposits[msg.sender][_strategyId] += _amount;
-        emit DepositRecorded(msg.sender, _strategyId, _amount);
+        require(isSupportedToken[_tokenAddress], "YieldAggregator: Unsupported token");
+        IERC20(_tokenAddress).safeTransferFrom(msg.sender, address(this), _amount);
+        userDeposits[msg.sender][_tokenAddress][_strategyId] += _amount;
+        emit Deposit(msg.sender, _tokenAddress, _amount, _strategyId, block.timestamp);
+
+        StrategyInfo storage strategyInfo = strategies[_strategyId];
+        if (strategyInfo.strategyType == StrategyType.Aave) {
+            // Forward tokens to the AAVEYieldStrategy contract
+            IERC20(_tokenAddress).safeTransfer(strategyInfo.strategyAddress, _amount);
+            // Tell the strategy to deposit to Aave
+            IAAVEYieldStrategy(strategyInfo.strategyAddress).depositToProtocol(_amount);
+        }
+        // For Mock strategies, do nothing extra
     }
 
-    /// @notice Conceptual withdrawal for MVP. This does NOT transfer or bridge assets; it only updates the recorded deposit for demonstration purposes.
-    function withdraw(bytes32 _strategyId, uint256 _amount) external nonReentrant {
+    /// @notice Secure ERC-20 withdrawal. Transfers tokens back to user and updates deposit record.
+    function withdraw(address _tokenAddress, uint256 _amount, uint256 _strategyId) public nonReentrant {
         require(_amount > 0, "Amount must be greater than zero");
-        require(userDeposits[msg.sender][_strategyId] >= _amount, "Insufficient deposit");
-        userDeposits[msg.sender][_strategyId] -= _amount;
-        emit WithdrawalRecorded(msg.sender, _strategyId, _amount);
+        require(userDeposits[msg.sender][_tokenAddress][_strategyId] >= _amount, "YieldAggregator: Insufficient deposited balance");
+
+        StrategyInfo storage strategyInfo = strategies[_strategyId];
+        if (strategyInfo.strategyType == StrategyType.Aave) {
+            // Withdraw from AAVEYieldStrategy to this contract
+            IAAVEYieldStrategy(strategyInfo.strategyAddress).withdrawFromProtocol(_amount, address(this));
+        }
+        // For Mock strategies, do nothing extra
+
+        userDeposits[msg.sender][_tokenAddress][_strategyId] -= _amount;
+        IERC20(_tokenAddress).safeTransfer(msg.sender, _amount);
+        emit Withdrawal(msg.sender, _tokenAddress, _amount, _strategyId, block.timestamp);
     }
 
-    function getUserDeposit(bytes32 _strategyId, address _user) external view returns (uint256) {
-        return userDeposits[_user][_strategyId];
+    function getUserDeposit(uint256 _strategyId, address _user, address _tokenAddress) external view returns (uint256) {
+        return userDeposits[_user][_tokenAddress][_strategyId];
     }
 
-    function getAllStrategyIds() public view returns (bytes32[] memory) {
+    function getAllStrategyIds() public view returns (uint256[] memory) {
         return strategyIds;
     }
 } 

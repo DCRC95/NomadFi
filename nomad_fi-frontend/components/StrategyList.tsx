@@ -134,9 +134,11 @@ export default function StrategyList({ strategies, filterRiskCategories }: Strat
       })
     : strategies;
 
+  const safeFilteredStrategies = Array.isArray(filteredStrategies) ? filteredStrategies : [];
+
   return (
     <div className="grid grid-cols-1 gap-6">
-      {filteredStrategies.map(strategy => (
+      {safeFilteredStrategies.map(strategy => (
         <StrategyCardWithFilter
           key={strategy.id + '-' + strategy.chainId}
           strategy={strategy}
@@ -476,7 +478,12 @@ function StrategyCardWithFilter({ strategy, filterRiskCategories }: { strategy: 
   return (
     <div className={`bg-white rounded-lg shadow p-6 border`}>
       <div className="flex items-center justify-between mb-2">
-        <div className="text-lg font-semibold">{strategy.name}</div>
+        <div className="text-lg font-semibold">
+          {strategy.name}
+          {strategy.name && strategy.name.toLowerCase().includes("aave") && (
+            <span className="ml-2 px-2 py-0.5 bg-blue-100 text-blue-700 rounded text-xs font-bold">Aave</span>
+          )}
+        </div>
         <span className={`px-3 py-1 rounded-full text-sm font-bold border ${riskColor}`}>{riskCategory} Risk</span>
       </div>
       <div className="text-gray-600 mb-1">{strategy.description}</div>
@@ -486,6 +493,14 @@ function StrategyCardWithFilter({ strategy, filterRiskCategories }: { strategy: 
       <div className="text-sm text-gray-500 mb-1">
         <span className="font-medium">APY:</span> <span className="text-green-600 font-semibold">{strategy.apy ? `${Number(strategy.apy) / 100}%` : 'N/A'}</span>
       </div>
+      {/* Aave-specific details */}
+      {strategy.name && strategy.name.toLowerCase().includes("aave") && (
+        <div className="text-xs text-blue-900 bg-blue-50 rounded p-2 mb-2">
+          <div><span className="font-medium">Underlying Token:</span> {strategy.underlyingToken || <span className="text-gray-400">N/A</span>}</div>
+          <div><span className="font-medium">aToken:</span> {strategy.aToken || <span className="text-gray-400">N/A</span>}</div>
+          <div><span className="font-medium">Current Balance:</span> {strategy.currentBalance !== null && strategy.currentBalance !== undefined ? strategy.currentBalance : <span className="text-gray-400">N/A</span>}</div>
+        </div>
+      )}
       <div className="text-xs text-gray-400 mb-2">
         <span className="font-medium">Address:</span> {strategy.strategyAddress}
       </div>

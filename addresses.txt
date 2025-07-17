@@ -1,11 +1,37 @@
 SEPOLIA:
-MockERC20 deployed to: 0x8b80b737c954d5fB43B390C083d72E210248ec64
+sepolia MockERC20 deployed to: 0x8b80b737c954d5fB43B390C083d72E210248ec64
 MockYieldStrategy deployed to: 0x2B3e7E84e4be132EB85c0180148c62fbDf6a7DCA
 Sepolia addStrategy tx: 0x5ac0db28fd8ddd9847f6f06a2992f8e46890d7f17deb072caee812d8ca37c3cd
 
 
 AMOY:
-MockERC20 deployed to: 0xd0B01c1ce87508757FEB41C5D8b2D117a4f4c283
+amoy MockERC20 deployed to: 0xd0B01c1ce87508757FEB41C5D8b2D117a4f4c283
 MockYieldStrategy deployed to: 0xEcC14061E9c3aa3cc1102d668c1b9e8c3da19392
 YieldAggregator deployed to: 0xf8BCC457c406a30e00340f4b78436f21a57073BA
 Amoy addStrategy tx: 0xb0239bd29d9472f2a1fe8b7104ecc9ae5be628541a4019e25051cd23c9c2a59b
+
+======================================================================================
+///new contract addresses for AAVE_V3 
+
+Deployed with account: 0x7E72ac838d13013a14693ca4e34B60c8b3670278
+Network: sepolia
+
+AAVE_V3_ADDRESSES_PROVIDER_SEPOLIA: 0x012bAC54348C0E635dCAc9D5FB99f06F24136C9A
+USDC_SEPOLIA: 0x65aFADD39029741B3b8f0756952C74678c9cEC93
+aUSDC_SEPOLIA: 0x2271e3Fef9e15046d09E1d78a8FF038c691E9Cf9
+AAVEYieldStrategy deployed at: 0xD1e7aE69Ab5500D3298C778D7fac18A9C1bae335
+YieldAggregator deployed at: 0x6bfF206EBb79F88E2A588A8b98A818ae30Fb4dE1
+
+===========================================
+REGISTRATIONS TO THE AGGREGATOR
+===========================================
+
+AaveV3USDCStrategy registered.
+Adding AmoyMockStrategy...
+AmoyMockStrategy registered.
+Adding SepoliaMockStrategy...
+SepoliaMockStrategy registered.
+All contracts deployed and strategies registered.
+
+======================================================================================
+

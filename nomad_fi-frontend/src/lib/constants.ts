@@ -10,12 +10,12 @@ export const MOCK_YIELD_STRATEGY_ABI = MockYieldStrategyAbi.abi;
 // Replace these with your actual deployed contract addresses
 export const CONTRACT_ADDRESSES: Record<number, Record<string, string>> = {
   80002: {
-    YieldAggregator: '0xf8BCC457c406a30e00340f4b78436f21a57073BA',
+    YieldAggregator: '0x22954D73CE88998Bc66334A6D28dDA5EfAc9cfDf',
     MockERC20: '0xd0B01c1ce87508757FEB41C5D8b2D117a4f4c283',
     MockYieldStrategy: '0xEcC14061E9c3aa3cc1102d668c1b9e8c3da19392',
   },
   11155111: {
-    YieldAggregator: '', // No aggregator on Sepolia
+    YieldAggregator: '0x22954D73CE88998Bc66334A6D28dDA5EfAc9cfDf', // Use Amoy aggregator for Sepolia strategies
     MockERC20: '0x8b80b737c954d5fB43B390C083d72E210248ec64',
     MockYieldStrategy: '0x2B3e7E84e4be132EB85c0180148c62fbDf6a7DCA',
   },
