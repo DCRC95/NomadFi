@@ -8,7 +8,7 @@ const YIELD_AGGREGATOR_ABI = (YIELD_AGGREGATOR_ABI_JSON as any).abi || YIELD_AGG
 const MOCK_YIELD_STRATEGY_ABI = (MOCK_YIELD_STRATEGY_ABI_JSON as any).abi || MOCK_YIELD_STRATEGY_ABI_JSON;
 const AAVE_YIELD_STRATEGY_ABI = (AAVE_YIELD_STRATEGY_ABI_JSON as any).abi || AAVE_YIELD_STRATEGY_ABI_JSON;
 
-const SEPOLIA_AGGREGATOR_ADDRESS = process.env.SEPOLIA_AGGREGATOR_ADDRESS;
+const SEPOLIA_AGGREGATOR_ADDRESS = process.env.SEPOLIA_AGGREGATOR_ADDRESS || "0x6624E8D32CA3f4Ae85814496340B64Ac38E1799C";
 
 const CHAIN_CONFIGS = [
   {
@@ -34,6 +34,7 @@ function serializeStrategyInfo(info: any) {
     tokenAddress: info.tokenAddress,
     strategyAddress: info.strategyAddress,
     name: info.name,
+    chainId: typeof info.chainId === 'bigint' ? Number(info.chainId) : info.chainId,
     strategyType: typeof info.strategyType === 'bigint' ? Number(info.strategyType) : info.strategyType,
     isActive: info.isActive,
   };
@@ -61,9 +62,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         await new Promise(resolve => setTimeout(resolve, 100));
         const info = await aggregator.getStrategyInfo(id);
         const strategy = serializeStrategyInfo(info);
-        // Hardcoded Amoy strategy address for chainId assignment
-        const AMOY_STRATEGY_ADDRESS = "0xEcC14061E9c3aa3cc1102d668c1b9e8c3da19392";
-        const chainId = strategy.strategyAddress === AMOY_STRATEGY_ADDRESS ? 80002 : 11155111;
+        const chainId = strategy.chainId || 11155111;
         const provider = PROVIDERS[chainId] || sepoliaProvider;
         let chainName = CHAIN_CONFIGS.find((c) => c.chainId === chainId)?.name || `Chain ${chainId}`;
         let apy = null;
@@ -74,16 +73,28 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           try {
             let strategyContract, apyRaw;
             if (typeof strategy.name === 'string' && strategy.name.toLowerCase().includes('aave')) {
+              // Debug logs for APY fetch
+              let providerUrl = (provider as any)?.connection?.url || (provider as any)?.connection || provider?.toString();
+              console.log(`[strategies API][DEBUG] Provider URL:`, providerUrl);
+              console.log(`[strategies API][DEBUG] Strategy address:`, strategy.strategyAddress);
+              if (Array.isArray(AAVE_YIELD_STRATEGY_ABI)) {
+                console.log(`[strategies API][DEBUG] ABI function names:`, AAVE_YIELD_STRATEGY_ABI.map((f: any) => f?.name).filter(Boolean));
+              }
               strategyContract = new ethers.Contract(
                 strategy.strategyAddress,
                 AAVE_YIELD_STRATEGY_ABI,
                 provider
               );
-              apyRaw = await strategyContract.apy();
-              apy = typeof apyRaw === 'bigint' ? apyRaw.toString() : apyRaw;
-              try { underlyingToken = await strategyContract.underlyingToken(); } catch {}
-              try { aToken = await strategyContract.aToken(); } catch {}
-              try { const balRaw = await strategyContract.getCurrentBalance(); currentBalance = typeof balRaw === 'bigint' ? balRaw.toString() : balRaw; } catch {}
+              try {
+                apyRaw = await strategyContract.apy();
+                apy = typeof apyRaw === 'bigint' ? apyRaw.toString() : apyRaw;
+              } catch (apyCallErr) {
+                console.error(`[strategies API][DEBUG] Error calling apy()`, apyCallErr);
+                apy = null;
+              }
+              try { underlyingToken = await strategyContract.underlyingToken(); } catch (e) { console.error('[strategies API][DEBUG] Error fetching underlyingToken', e); }
+              try { aToken = await strategyContract.aToken(); } catch (e) { console.error('[strategies API][DEBUG] Error fetching aToken', e); }
+              try { const balRaw = await strategyContract.getCurrentBalance(); currentBalance = typeof balRaw === 'bigint' ? balRaw.toString() : balRaw; } catch (e) { console.error('[strategies API][DEBUG] Error fetching getCurrentBalance', e); }
             } else {
               strategyContract = new ethers.Contract(
                 strategy.strategyAddress,

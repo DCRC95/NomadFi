@@ -43,6 +43,26 @@ async function main() {
     const yieldAggregator = await YieldAggregator.deploy();
     await yieldAggregator.waitForDeployment();
     console.log(`YieldAggregator deployed to: ${yieldAggregator.target}`);
+
+    // Example: Register strategies after deployment (pseudo-code, update as needed)
+    // await yieldAggregator.addStrategy(
+    //   1, // id
+    //   mockERC20.target, // token address
+    //   mockYieldStrategy.target, // strategy address
+    //   "Mock Yield Sepolia", // name
+    //   11155111, // chainId for Sepolia
+    //   0 // StrategyType.Mock
+    // );
+    //
+    // For Amoy:
+    // await yieldAggregator.addStrategy(
+    //   2, // id
+    //   mockERC20.target, // token address
+    //   mockYieldStrategy.target, // strategy address
+    //   "Mock Yield Amoy", // name
+    //   80002, // chainId for Amoy
+    //   0 // StrategyType.Mock
+    // );
   } else {
     console.log("Skipping YieldAggregator deployment (only deployed on Amoy)");
   }

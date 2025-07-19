@@ -6,39 +6,11 @@ import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "contracts/interfaces/IAAVEYieldStrategy.sol";
+import "contracts/interfaces/IMockYieldStrategy.sol";
+import "contracts/interfaces/IYieldAggregator.sol";
 
-contract YieldAggregator is Ownable, ReentrancyGuard {
+contract YieldAggregator is Ownable, ReentrancyGuard, IYieldAggregator {
     using SafeERC20 for IERC20;
-
-    enum StrategyType { Mock, Aave }
-
-    struct StrategyInfo {
-        address tokenAddress;
-        address strategyAddress;
-        string name;
-        StrategyType strategyType;
-        bool isActive;
-    }
-
-    mapping(uint256 => StrategyInfo) public strategies;
-    uint256[] public strategyIds;
-    // user => token => strategyId => amount
-    mapping(address => mapping(address => mapping(uint256 => uint256))) public userDeposits;
-    // Whitelisted tokens
-    mapping(address => bool) public isSupportedToken;
-
-    event TokenSupported(address indexed tokenAddress);
-    event TokenUnSupported(address indexed tokenAddress);
-    event StrategyAdded(
-        uint256 indexed id,
-        address indexed tokenAddress,
-        address strategyAddress,
-        string name,
-        StrategyType strategyType
-    );
-    event StrategyRemoved(uint256 indexed strategyId);
-    event Deposit(address indexed user, address indexed token, uint256 amount, uint256 indexed strategyId, uint256 timestamp);
-    event Withdrawal(address indexed user, address indexed token, uint256 amount, uint256 indexed strategyId, uint256 timestamp);
 
     constructor(address[] memory _initialSupportedTokens) Ownable(msg.sender) {
         for (uint256 i = 0; i < _initialSupportedTokens.length; i++) {
@@ -57,17 +29,26 @@ contract YieldAggregator is Ownable, ReentrancyGuard {
         emit TokenUnSupported(_tokenAddress);
     }
 
+    mapping(uint256 => IYieldAggregator.StrategyInfo) public strategies;
+    uint256[] public strategyIds;
+    // user => token => strategyId => amount
+    mapping(address => mapping(address => mapping(uint256 => uint256))) public userDeposits;
+    // Whitelisted tokens
+    mapping(address => bool) public isSupportedToken;
+
     function addStrategy(
         uint256 _id,
         address _tokenAddress,
         address _strategyAddress,
         string memory _name,
-        StrategyType _strategyType
+        uint256 _chainId,
+        IYieldAggregator.StrategyType _strategyType
     ) public onlyOwner {
-        strategies[_id] = StrategyInfo({
+        strategies[_id] = IYieldAggregator.StrategyInfo({
             tokenAddress: _tokenAddress,
             strategyAddress: _strategyAddress,
             name: _name,
+            chainId: _chainId,
             strategyType: _strategyType,
             isActive: true
         });
@@ -81,19 +62,24 @@ contract YieldAggregator is Ownable, ReentrancyGuard {
         emit StrategyRemoved(_strategyId);
     }
 
-    function getStrategyInfo(uint256 _strategyId) external view returns (StrategyInfo memory) {
+    function getStrategyInfo(uint256 _strategyId) external view override returns (IYieldAggregator.StrategyInfo memory) {
         return strategies[_strategyId];
     }
 
-    function getStrategyAPY(uint256 _strategyId) public view returns (uint256) {
-        StrategyInfo storage strategyInfo = strategies[_strategyId];
-        if (strategyInfo.strategyType == StrategyType.Aave) {
-            return IAAVEYieldStrategy(strategyInfo.strategyAddress).apy();
-        } else if (strategyInfo.strategyType == StrategyType.Mock) {
-            // Assuming IMockYieldStrategy is defined elsewhere or will be added
-            // For now, returning a placeholder or throwing an error if not implemented
-            // revert("Unknown strategy type"); // Original code had this line commented out
-            return 0; // Placeholder for Mock strategy APY
+    function getStrategyAPY(uint256 _strategyId) public view override returns (uint256) {
+        IYieldAggregator.StrategyInfo storage strategyInfo = strategies[_strategyId];
+        if (strategyInfo.strategyType == IYieldAggregator.StrategyType.Aave) {
+            try IAAVEYieldStrategy(strategyInfo.strategyAddress).apy() returns (uint256 apyValue) {
+                return apyValue;
+            } catch {
+                return 0; // Fallback if APY call fails
+            }
+        } else if (strategyInfo.strategyType == IYieldAggregator.StrategyType.Mock) {
+            try IMockYieldStrategy(strategyInfo.strategyAddress).getAPY() returns (uint256 apyValue) {
+                return apyValue;
+            } catch {
+                return 0; // Fallback if APY call fails
+            }
         } else {
             revert("Unknown strategy type");
         }
@@ -108,8 +94,8 @@ contract YieldAggregator is Ownable, ReentrancyGuard {
         userDeposits[msg.sender][_tokenAddress][_strategyId] += _amount;
         emit Deposit(msg.sender, _tokenAddress, _amount, _strategyId, block.timestamp);
 
-        StrategyInfo storage strategyInfo = strategies[_strategyId];
-        if (strategyInfo.strategyType == StrategyType.Aave) {
+        IYieldAggregator.StrategyInfo storage strategyInfo = strategies[_strategyId];
+        if (strategyInfo.strategyType == IYieldAggregator.StrategyType.Aave) {
             // Forward tokens to the AAVEYieldStrategy contract
             IERC20(_tokenAddress).safeTransfer(strategyInfo.strategyAddress, _amount);
             // Tell the strategy to deposit to Aave
@@ -123,8 +109,8 @@ contract YieldAggregator is Ownable, ReentrancyGuard {
         require(_amount > 0, "Amount must be greater than zero");
         require(userDeposits[msg.sender][_tokenAddress][_strategyId] >= _amount, "YieldAggregator: Insufficient deposited balance");
 
-        StrategyInfo storage strategyInfo = strategies[_strategyId];
-        if (strategyInfo.strategyType == StrategyType.Aave) {
+        IYieldAggregator.StrategyInfo storage strategyInfo = strategies[_strategyId];
+        if (strategyInfo.strategyType == IYieldAggregator.StrategyType.Aave) {
             // Withdraw from AAVEYieldStrategy to this contract
             IAAVEYieldStrategy(strategyInfo.strategyAddress).withdrawFromProtocol(_amount, address(this));
         }
@@ -142,4 +128,91 @@ contract YieldAggregator is Ownable, ReentrancyGuard {
     function getAllStrategyIds() public view returns (uint256[] memory) {
         return strategyIds;
     }
-} 
+
+    // Comprehensive Data Functions
+    function getStrategyData(uint256 _strategyId) external view override returns (StrategyData memory) {
+        StrategyInfo memory strategy = strategies[_strategyId];
+        
+        // Get APY from strategy contract with error handling
+        uint256 strategyApy = 0;
+        if (strategy.strategyType == StrategyType.Aave) {
+            try IAAVEYieldStrategy(strategy.strategyAddress).apy() returns (uint256 apyValue) {
+                strategyApy = apyValue;
+            } catch {
+                strategyApy = 0; // Fallback if APY call fails
+            }
+        } else if (strategy.strategyType == StrategyType.Mock) {
+            try IMockYieldStrategy(strategy.strategyAddress).getAPY() returns (uint256 apyValue) {
+                strategyApy = apyValue;
+            } catch {
+                strategyApy = 0; // Fallback if APY call fails
+            }
+        }
+        
+        // Calculate total deposits for this strategy
+        uint256 totalDeposits = 0;
+        for (uint256 i = 0; i < strategyIds.length; i++) {
+            if (strategyIds[i] == _strategyId) {
+                // Sum all user deposits for this strategy
+                // This is a simplified calculation - in production you might want to track this separately
+                totalDeposits = 0; // Placeholder - would need to iterate through all users
+                break;
+            }
+        }
+        
+        return StrategyData({
+            tokenAddress: strategy.tokenAddress,
+            strategyAddress: strategy.strategyAddress,
+            name: strategy.name,
+            chainId: strategy.chainId,
+            strategyType: strategy.strategyType,
+            isActive: strategy.isActive,
+            apy: strategyApy,
+            totalDeposits: totalDeposits,
+            totalValueLocked: totalDeposits // Simplified - in production this would include accrued interest
+        });
+    }
+
+    function getUserData(address _user, uint256 _strategyId) external view override returns (UserData memory) {
+        StrategyInfo memory strategy = strategies[_strategyId];
+        
+        // Get token balance
+        uint256 balance = IERC20(strategy.tokenAddress).balanceOf(_user);
+        
+        // Get allowance
+        uint256 allowance = IERC20(strategy.tokenAddress).allowance(_user, address(this));
+        
+        // Get deposited amount
+        uint256 depositedAmount = userDeposits[_user][strategy.tokenAddress][_strategyId];
+        
+        // Determine if approval is needed (simplified logic)
+        bool needsApproval = allowance < depositedAmount;
+        
+        return UserData({
+            balance: balance,
+            allowance: allowance,
+            depositedAmount: depositedAmount,
+            needsApproval: needsApproval
+        });
+    }
+
+    function getBatchUserData(address _user, uint256[] calldata _strategyIds) external view override returns (UserData[] memory) {
+        UserData[] memory userDataArray = new UserData[](_strategyIds.length);
+        
+        for (uint256 i = 0; i < _strategyIds.length; i++) {
+            userDataArray[i] = this.getUserData(_user, _strategyIds[i]);
+        }
+        
+        return userDataArray;
+    }
+
+    function getBatchStrategyData(uint256[] calldata _strategyIds) external view override returns (StrategyData[] memory) {
+        StrategyData[] memory strategyDataArray = new StrategyData[](_strategyIds.length);
+        
+        for (uint256 i = 0; i < _strategyIds.length; i++) {
+            strategyDataArray[i] = this.getStrategyData(_strategyIds[i]);
+        }
+        
+        return strategyDataArray;
+    }
+}

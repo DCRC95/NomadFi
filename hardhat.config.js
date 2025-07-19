@@ -2,7 +2,7 @@ require("dotenv").config();
 require("@nomicfoundation/hardhat-toolbox");
 require('@nomicfoundation/hardhat-ethers');
 require("@nomicfoundation/hardhat-verify");
-require("hardhat-deploy");
+// require("hardhat-deploy"); // Commented out for local testing
 
 module.exports = {
   defaultNetwork: "hardhat",

@@ -15,7 +15,7 @@ export const CONTRACT_ADDRESSES: Record<number, Record<string, string>> = {
     MockYieldStrategy: '0xEcC14061E9c3aa3cc1102d668c1b9e8c3da19392',
   },
   11155111: {
-    YieldAggregator: '0x22954D73CE88998Bc66334A6D28dDA5EfAc9cfDf', // Use Amoy aggregator for Sepolia strategies
+    YieldAggregator: '0x6624E8D32CA3f4Ae85814496340B64Ac38E1799C', // Updated Sepolia aggregator address
     MockERC20: '0x8b80b737c954d5fB43B390C083d72E210248ec64',
     MockYieldStrategy: '0x2B3e7E84e4be132EB85c0180148c62fbDf6a7DCA',
   },

@@ -66,9 +66,19 @@ contract AAVEYieldStrategy is IAAVEYieldStrategy {
     }
 
     function apy() external view override returns (uint256) {
+        // Get reserve data from Aave Lending Pool
         IAaveV3LendingPool.ReserveData memory reserveData = AAVE_LENDING_POOL.getReserveData(address(underlyingToken));
+
+        // currentLiquidityRate is in RAY (1e27)
         uint256 rayRate = reserveData.currentLiquidityRate;
-        uint256 percentageAPY = (rayRate * 100) / 1e27;
-        return percentageAPY;
+
+        // Convert RAY to a value with 18 decimals for percentage display.
+        // Formula: (rayRate * 1e18) / 1e27 = rayRate / 1e9
+        // This gives us the APY as a value where 1.0 = 100% (with 18 decimals)
+        // So, if rayRate represents 5% (0.05), the result will be 0.05 * 1e18 = 5e16
+        // To get the actual percentage, the frontend will divide by 1e18 and multiply by 100.
+        uint256 apyWith18Decimals = rayRate / 1e9; // 1e27 / 1e9 = 1e18 (scale factor for 100%)
+
+        return apyWith18Decimals;
     }
 } 

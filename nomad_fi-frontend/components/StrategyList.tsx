@@ -153,32 +153,110 @@ function StrategyCardWithFilter({ strategy, filterRiskCategories }: { strategy: 
   const { address: userAddress } = useAccount();
   const connectedChainId = useChainId();
   const chainIdNum = Number(strategy.chainId);
-  const aggregatorAddress = CONTRACT_ADDRESSES[chainIdNum]?.YieldAggregator as `0x${string}`;
-  const mockErc20Address = CONTRACT_ADDRESSES[chainIdNum]?.MockERC20 as `0x${string}`;
+  // Always use Sepolia aggregator for all strategies (since it's the only one deployed)
+  const aggregatorAddress = CONTRACT_ADDRESSES[11155111]?.YieldAggregator as `0x${string}`;
   const strategyId = strategy.id;
   const isOnCorrectNetwork = Number(connectedChainId) === chainIdNum;
+  
+  // Network switching functionality
+  const { switchChain, isPending: isSwitchingChain } = useSwitchChain();
+  
+  const handleSwitchToStrategyNetwork = async () => {
+    try {
+      if (chainIdNum === 11155111) {
+        await switchChain({ chainId: sepolia.id });
+      } else if (chainIdNum === 80002) {
+        await switchChain({ chainId: polygonAmoy.id });
+      }
+    } catch (error) {
+      console.error('Failed to switch network:', error);
+    }
+  };
 
-  // Fetch user's MockERC20 balance for the strategy's chain
-  const { data: mockTokenBalance, isLoading: isBalanceLoading, error: balanceError } = useBalance({
-    address: userAddress,
-    token: mockErc20Address,
+  // Use the correct token address for each strategy
+  // For Aave strategies, use the registered tokenAddress (USDC)
+  // For Mock strategies, use the registered tokenAddress (MockERC20)
+  const tokenAddress = strategy.tokenAddress as `0x${string}`;
+  const underlyingTokenAddress = strategy.tokenAddress as `0x${string}`; // Use the same address for all operations
+
+  // Fetch token symbol and decimals from the underlying token
+  const { data: tokenSymbol } = useReadContract({
+    address: underlyingTokenAddress,
+    abi: MockERC20Abi.abi,
+    functionName: "symbol",
+    chainId: chainIdNum,
+  });
+  const { data: tokenDecimals } = useReadContract({
+    address: underlyingTokenAddress,
+    abi: MockERC20Abi.abi,
+    functionName: "decimals",
     chainId: chainIdNum,
   });
 
-  // Fetch user's deposited balance in the aggregator for this strategy
-  const { data: depositedAmount, isLoading: isDepositLoading, error: depositedAmountError } = useReadContract({
-    address: aggregatorAddress,
-    abi: YIELD_AGGREGATOR_ABI,
-    functionName: "userDeposits",
-    args: [userAddress, mockErc20Address, strategyId],
+  // Fetch user's token balance for the strategy's chain using balanceOf (works regardless of connected network)
+  const { data: tokenBalanceRaw, isLoading: isBalanceLoading, error: balanceError } = useReadContract({
+    address: underlyingTokenAddress,
+    abi: MockERC20Abi.abi,
+    functionName: "balanceOf",
+    args: [userAddress],
+    chainId: chainIdNum,
   });
+
+  // Debug logging
+  React.useEffect(() => {
+    if (balanceError) {
+      console.error('Balance fetch error:', {
+        strategyId: strategy.id,
+        chainId: chainIdNum,
+        tokenAddress: underlyingTokenAddress,
+        userAddress,
+        error: balanceError
+      });
+    }
+  }, [balanceError, strategy.id, chainIdNum, underlyingTokenAddress, userAddress]);
+
+  // Fetch user's deposited balance in the aggregator for this strategy
+  const shouldFetchDeposit = !!userAddress && !!tokenAddress;
+  const { data: depositedAmount, isLoading: isDepositLoading, error: depositedAmountError } = useReadContract(
+    shouldFetchDeposit
+      ? {
+          address: aggregatorAddress,
+          abi: YIELD_AGGREGATOR_ABI,
+          functionName: "getUserDeposit",
+          args: [Number(strategyId), userAddress, tokenAddress],
+          chainId: 11155111, // Always call aggregator on Sepolia
+        }
+      : { address: aggregatorAddress, abi: YIELD_AGGREGATOR_ABI, functionName: "getUserDeposit", args: [0, "0x0000000000000000000000000000000000000000", "0x0000000000000000000000000000000000000000"], chainId: 11155111 }
+  );
+
+  // Debug logging for deposited amount
+  React.useEffect(() => {
+    if (depositedAmountError) {
+      console.error('Deposited amount fetch error:', {
+        strategyId: strategy.id,
+        userAddress,
+        tokenAddress,
+        aggregatorAddress,
+        error: depositedAmountError
+      });
+    } else if (depositedAmount !== undefined && depositedAmount !== null) {
+      console.log('Deposited amount fetched:', {
+        strategyId: strategy.id,
+        userAddress,
+        tokenAddress,
+        depositedAmount: depositedAmount.toString(),
+        rawValue: depositedAmount
+      });
+    }
+  }, [depositedAmount, depositedAmountError, strategy.id, userAddress, tokenAddress, aggregatorAddress]);
 
   // Approval logic
   const { data: allowance, refetch: refetchAllowance, isLoading: isAllowanceLoading } = useReadContract({
     abi: MockERC20Abi.abi,
-    address: mockErc20Address,
+    address: underlyingTokenAddress,
     functionName: "allowance",
     args: [userAddress, aggregatorAddress],
+    chainId: chainIdNum, // Use strategy's chain for token allowance
   });
 
   const { writeContract: writeApprove, data: approveHash, isPending: isApproving, isSuccess: isApproveSuccess, error: approveError } = useWriteContract();
@@ -207,19 +285,70 @@ function StrategyCardWithFilter({ strategy, filterRiskCategories }: { strategy: 
   });
 
   // Refetch hooks for balance and deposited amount
-  const { refetch: refetchMockTokenBalance } = useBalance({
-    address: userAddress,
-    token: mockErc20Address,
+  const { refetch: refetchTokenBalance } = useReadContract({
+    address: underlyingTokenAddress,
+    abi: MockERC20Abi.abi,
+    functionName: "balanceOf",
+    args: [userAddress],
     chainId: chainIdNum,
   });
   const { refetch: refetchDepositedAmount } = useReadContract({
     address: aggregatorAddress,
     abi: YIELD_AGGREGATOR_ABI,
-    functionName: "userDeposits",
-    args: [userAddress, mockErc20Address, strategyId],
+    functionName: "getUserDeposit",
+    args: [strategyId, userAddress, tokenAddress],
+    chainId: 11155111, // Always call aggregator on Sepolia
   });
 
-  // Deposit handler
+  // USDC and Aggregator addresses for Sepolia
+  const USDC_TOKEN_ADDRESS = "0x94a9d9ac8a22534e3faca9f4e7f2e2cf85d5e4c8";
+  const YIELD_AGGREGATOR_ADDRESS = "0x6624E8D32CA3f4Ae85814496340B64Ac38E1799C";
+
+  // Determine if this is the Aave/USDC strategy (by name or id)
+  const isAaveStrategy = (strategy.name && strategy.name.toLowerCase().includes("aave")) || strategy.id === 3;
+  // Determine if this is the LINK strategy (by name)
+  const isLinkStrategy = strategy.name && strategy.name.toLowerCase().includes("link");
+  // Determine if this is specifically the Aave/USDC strategy (not LINK)
+  const isAaveUsdcStrategy = (strategy.name && strategy.name.toLowerCase().includes("aave") && !strategy.name.toLowerCase().includes("link")) || strategy.id === 3;
+
+  // Use 18 decimals for LINK, 6 for Aave/USDC, otherwise fallback to tokenDecimals or 18
+  const decimals = isLinkStrategy ? 18 : (isAaveUsdcStrategy ? 6 : (typeof tokenDecimals === 'number' ? tokenDecimals : 18));
+
+  // Approve handler: handle LINK Aave strategies correctly
+  const handleApprove = async () => {
+    if (!isOnCorrectNetwork) {
+      try {
+        await handleSwitchToStrategyNetwork();
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      } catch (error) {
+        console.error('Failed to switch network for approval:', error);
+        return;
+      }
+    }
+    try {
+      if (isAaveUsdcStrategy) {
+        // Approve on USDC, spender = Aggregator
+        await writeApprove({
+          abi: MockERC20Abi.abi,
+          address: USDC_TOKEN_ADDRESS,
+          functionName: "approve",
+          args: [YIELD_AGGREGATOR_ADDRESS, ethers.MaxUint256],
+        });
+      } else {
+        // Default logic for other strategies (including LINK Aave)
+        await writeApprove({
+          abi: MockERC20Abi.abi,
+          address: underlyingTokenAddress,
+          functionName: "approve",
+          args: [aggregatorAddress, ethers.MaxUint256],
+        });
+      }
+    } catch (err) {
+      // error handled by wagmi
+    }
+  };
+
+  // Deposit handler: handle LINK Aave strategies correctly
   const handleDeposit = async (e: React.FormEvent) => {
     e.preventDefault();
     setTxState("loading");
@@ -227,19 +356,34 @@ function StrategyCardWithFilter({ strategy, filterRiskCategories }: { strategy: 
     let amountBigInt: bigint;
     try {
       if (!amount || isNaN(Number(amount))) throw new Error("Invalid amount");
-      amountBigInt = ethers.parseUnits(amount, 18);
+      amountBigInt = ethers.parseUnits(amount, isAaveUsdcStrategy ? 6 : (typeof tokenDecimals === 'number' ? tokenDecimals : 18));
     } catch (parseErr: any) {
       setTxState("error");
       setTxError("Invalid amount format");
       return;
     }
     try {
-      await writeDeposit({
-        address: aggregatorAddress,
-        abi: YIELD_AGGREGATOR_ABI,
-        functionName: "deposit",
-        args: [mockErc20Address, amountBigInt, strategyId],
-      });
+      if (!isOnCorrectNetwork) {
+        await handleSwitchToStrategyNetwork();
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      }
+      if (isAaveUsdcStrategy) {
+        // Deposit on Aggregator, USDC, strategyId 3
+        await writeDeposit({
+          address: YIELD_AGGREGATOR_ADDRESS,
+          abi: YIELD_AGGREGATOR_ABI,
+          functionName: "deposit",
+          args: [USDC_TOKEN_ADDRESS, amountBigInt, 3],
+        });
+      } else {
+        // Default logic for other strategies (including LINK Aave)
+        await writeDeposit({
+          address: aggregatorAddress,
+          abi: YIELD_AGGREGATOR_ABI,
+          functionName: "deposit",
+          args: [underlyingTokenAddress, amountBigInt, strategyId],
+        });
+      }
     } catch (err: any) {
       setTxState("error");
       setTxError(err?.message || "Transaction failed");
@@ -248,9 +392,9 @@ function StrategyCardWithFilter({ strategy, filterRiskCategories }: { strategy: 
     setTxState("success");
     setAmount("");
     setShowForm(null);
-    // Refetch balances after deposit
-    refetchMockTokenBalance && refetchMockTokenBalance();
+    refetchTokenBalance && refetchTokenBalance();
     refetchDepositedAmount && refetchDepositedAmount();
+    refetchAllowance && refetchAllowance();
   };
 
   // Withdraw handler
@@ -268,11 +412,18 @@ function StrategyCardWithFilter({ strategy, filterRiskCategories }: { strategy: 
       return;
     }
     try {
+      // Switch to Sepolia for aggregator transaction
+      if (Number(connectedChainId) !== 11155111) {
+        await switchChain({ chainId: sepolia.id });
+        // Wait for network switch to complete
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      }
+      
       await writeWithdraw({
         address: aggregatorAddress,
         abi: YIELD_AGGREGATOR_ABI,
         functionName: "withdraw",
-        args: [mockErc20Address, withdrawAmountBigInt, strategyId],
+        args: [underlyingTokenAddress, withdrawAmountBigInt, strategyId],
       });
     } catch (err: any) {
       setTxState("error");
@@ -282,9 +433,10 @@ function StrategyCardWithFilter({ strategy, filterRiskCategories }: { strategy: 
     setTxState("success");
     setWithdrawAmount("");
     setShowForm(null);
-    // Refetch balances after withdrawal
-    refetchMockTokenBalance && refetchMockTokenBalance();
+    // Refetch balances and allowance after withdrawal
+    refetchTokenBalance && refetchTokenBalance();
     refetchDepositedAmount && refetchDepositedAmount();
+    refetchAllowance && refetchAllowance();
   };
 
   // Calculate risk category
@@ -302,10 +454,10 @@ function StrategyCardWithFilter({ strategy, filterRiskCategories }: { strategy: 
       ? "text-red-600 bg-red-100 border-red-300"
       : "text-gray-500 bg-gray-100 border-gray-300";
 
-  // Parse amount to BigInt for comparison
+  // Parse amount to BigInt for comparison (handle USDC decimals for Aave strategies)
   let parsedAmount: bigint = BigInt(0);
   try {
-    parsedAmount = amount ? ethers.parseUnits(amount, 18) : BigInt(0);
+    parsedAmount = amount ? ethers.parseUnits(amount, decimals) : BigInt(0);
   } catch {}
   const needsApproval =
     allowance != null &&
@@ -324,19 +476,41 @@ function StrategyCardWithFilter({ strategy, filterRiskCategories }: { strategy: 
       : BigInt(0);
   const disableWithdraw = !userAddress || !withdrawAmount || Number(withdrawAmount) <= 0 || withdrawAmountBigInt > depositedAmountNum || isWithdrawing || isConfirmingWithdraw;
 
-  // Approve handler
-  const handleApprove = async () => {
-    try {
-      await writeApprove({
-        abi: MockERC20Abi.abi,
-        address: mockErc20Address,
-        functionName: "approve",
-        args: [aggregatorAddress, ethers.MaxUint256],
-      });
-    } catch (err) {
-      // error handled by wagmi
+  // Track approval state for seamless UX
+  const [approvalConfirmed, setApprovalConfirmed] = React.useState(false);
+
+  // Debug logging for allowance and approval state
+  React.useEffect(() => {
+    console.log('Debug approval state:', {
+      strategyName: strategy.name,
+      isLinkStrategy,
+      isAaveUsdcStrategy,
+      allowance: allowance?.toString(),
+      parsedAmount: parsedAmount.toString(),
+      needsApproval,
+      isApproveSuccess,
+      isConfirmingApproval,
+      approvalConfirmed
+    });
+  }, [strategy.name, isLinkStrategy, isAaveUsdcStrategy, allowance, parsedAmount, needsApproval, isApproveSuccess, isConfirmingApproval, approvalConfirmed]);
+
+  // Watch for approval confirmation (Aave/USDC only)
+  React.useEffect(() => {
+    if (isAaveUsdcStrategy && isApproveSuccess && !isConfirmingApproval && approveHash) {
+      setApprovalConfirmed(true);
     }
-  };
+    if (!isApproving && !isApproveSuccess && !isConfirmingApproval) {
+      setApprovalConfirmed(false);
+    }
+  }, [isAaveUsdcStrategy, isApproveSuccess, isApproving, isConfirmingApproval, approveHash]);
+
+  // Refetch allowance after approval is confirmed
+  React.useEffect(() => {
+    if (isApproveSuccess && !isConfirmingApproval && approveHash) {
+      console.log('Approval confirmed, refetching allowance...');
+      refetchAllowance && refetchAllowance();
+    }
+  }, [isApproveSuccess, isConfirmingApproval, approveHash, refetchAllowance]);
 
   // UI for deposit/withdraw form
   function renderForm() {
@@ -346,37 +520,89 @@ function StrategyCardWithFilter({ strategy, filterRiskCategories }: { strategy: 
         <div className="mb-2 text-sm">
           <span className="font-medium">Wallet Balance:</span>{" "}
           {isBalanceLoading && <span className="text-gray-400">Loading...</span>}
-          {balanceError && <span className="text-red-400">Error</span>}
-          {mockTokenBalance && (
-            <span className="text-blue-700 font-mono">{mockTokenBalance.formatted} {mockTokenBalance.symbol}</span>
-          )}
+          {balanceError && <span className="text-red-400">Error: {balanceError.message}</span>}
+          {!isBalanceLoading && !balanceError && tokenBalanceRaw && (typeof tokenBalanceRaw === 'bigint' || typeof tokenBalanceRaw === 'string' || typeof tokenBalanceRaw === 'number') ? (
+            <span className="text-blue-700 font-mono">{ethers.formatUnits(tokenBalanceRaw, decimals)} {typeof tokenSymbol === 'string' ? tokenSymbol : ''}</span>
+          ) : !isBalanceLoading && !balanceError ? (
+            <span className="text-gray-400">0 {typeof tokenSymbol === 'string' ? tokenSymbol : ''}</span>
+          ) : null}
         </div>
+        {/* Debug info */}
+        <div className="mb-2 text-xs text-gray-500 bg-gray-100 p-2 rounded">
+          <div>Debug: strategyId = {String(Number(strategyId))}</div>
+          <div>userAddress = {userAddress || 'undefined'}</div>
+          <div>tokenAddress = {tokenAddress}</div>
+          <div>Aggregator = {aggregatorAddress}</div>
+          <div>Deposited (raw) = {String(depositedAmount || 'undefined')}</div>
+          <div>shouldFetchDeposit = {String(shouldFetchDeposit)}</div>
+        </div>
+        
         {/* User's deposited balance display */}
         <div className="mb-2 text-sm">
           <span className="font-medium">Deposited in Aggregator:</span>{" "}
           {isDepositLoading && <span className="text-gray-400">Loading...</span>}
-          {depositedAmountError && <span className="text-red-400">Error</span>}
+          {depositedAmountError && <span className="text-red-400">Error: {depositedAmountError.message}</span>}
           {(typeof depositedAmount === "string" || typeof depositedAmount === "number" || typeof depositedAmount === "bigint") && (
-            <span className="text-green-700 font-mono">{ethers.formatUnits(depositedAmount, 17)}</span>
+            <span className="text-green-700 font-mono">{ethers.formatUnits(depositedAmount, decimals)}</span>
           )}
         </div>
-        {/* Approval UI */}
+        {/* Network Status */}
         <div className="mb-2 text-sm">
-          {isAllowanceLoading ? (
-            <span className="text-gray-400">Checking allowance...</span>
-          ) : needsApproval ? (
+          {!isOnCorrectNetwork ? (
+            <div className="flex items-center gap-2">
+              <span className="text-orange-600">⚠️ Switch to {CHAIN_NAMES[chainIdNum]} to interact with tokens</span>
+              <button
+                type="button"
+                onClick={handleSwitchToStrategyNetwork}
+                disabled={isSwitchingChain}
+                className="px-2 py-1 bg-blue-500 text-white rounded text-xs"
+              >
+                {isSwitchingChain ? "Switching..." : "Switch Network"}
+              </button>
+            </div>
+          ) : (
+            <span className="text-green-600">✓ Connected to {CHAIN_NAMES[chainIdNum]}</span>
+          )}
+        </div>
+        {/* Approval and Deposit UI for Aave/USDC */}
+        {isAaveUsdcStrategy ? (
+          <div className="mb-2 text-sm flex gap-2">
             <button
               type="button"
               onClick={handleApprove}
-              disabled={isApproving || isConfirmingApproval}
-              className="px-3 py-1 bg-yellow-500 text-white rounded"
+              disabled={isApproving || isConfirmingApproval || approvalConfirmed || !isOnCorrectNetwork}
+              className="px-3 py-1 bg-yellow-500 text-white rounded disabled:opacity-50"
             >
-              {isApproving || isConfirmingApproval ? "Approving..." : "Approve Token"}
+              {isApproving || isConfirmingApproval ? "Approving..." : "Approve USDC"}
             </button>
-          ) : null}
-          {isApproveSuccess && <span className="text-green-600 ml-2">Approval transaction sent!</span>}
-          {approveError && <span className="text-red-600 ml-2">{approveError.message}</span>}
-        </div>
+            <button
+              type="button"
+              onClick={e => handleDeposit(e as any)}
+              disabled={!approvalConfirmed || isDepositing || isConfirmingDeposit || !userAddress || !amount || Number(amount) <= 0 || !isOnCorrectNetwork}
+              className="px-3 py-1 bg-green-600 text-white rounded disabled:opacity-50"
+            >
+              {isDepositing || isConfirmingDeposit ? "Depositing..." : "Deposit"}
+            </button>
+          </div>
+        ) : (
+          // Default approval UI for other strategies
+          <div className="mb-2 text-sm">
+            {isAllowanceLoading ? (
+              <span className="text-gray-400">Checking allowance...</span>
+            ) : needsApproval ? (
+              <button
+                type="button"
+                onClick={handleApprove}
+                disabled={isApproving || isConfirmingApproval || !isOnCorrectNetwork}
+                className="px-3 py-1 bg-yellow-500 text-white rounded disabled:opacity-50"
+              >
+                {isApproving || isConfirmingApproval ? "Approving..." : `Approve ${typeof tokenSymbol === 'string' ? tokenSymbol : ''}`}
+              </button>
+            ) : null}
+            {isApproveSuccess && <span className="text-green-600 ml-2">Approval transaction sent!</span>}
+            {approveError && <span className="text-red-600 ml-2">{approveError.message}</span>}
+          </div>
+        )}
         {/* Deposit form */}
         <form className="flex flex-col gap-2 mb-2" onSubmit={handleDeposit}>
           <label className="text-sm font-medium">
@@ -394,8 +620,9 @@ function StrategyCardWithFilter({ strategy, filterRiskCategories }: { strategy: 
           <div className="flex gap-2">
             <button
               type="submit"
-              className="px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700"
-              disabled={!userAddress || !amount || Number(amount) <= 0 || needsApproval || isDepositing || isConfirmingDeposit}
+              className="px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50"
+              disabled={isAaveUsdcStrategy ? true : (!userAddress || !amount || Number(amount) <= 0 || needsApproval || isDepositing || isConfirmingDeposit || !isOnCorrectNetwork)}
+              style={isAaveUsdcStrategy ? { display: 'none' } : {}}
             >
               {isDepositing || isConfirmingDeposit
                 ? "Depositing..."
@@ -502,7 +729,13 @@ function StrategyCardWithFilter({ strategy, filterRiskCategories }: { strategy: 
         </div>
       )}
       <div className="text-xs text-gray-400 mb-2">
-        <span className="font-medium">Address:</span> {strategy.strategyAddress}
+        <span className="font-medium">Strategy Address:</span> {strategy.strategyAddress}
+      </div>
+      <div className="text-xs text-gray-400 mb-2">
+        <span className="font-medium">Token Address:</span> {strategy.tokenAddress}
+        {balanceError && balanceError.message.includes('execution reverted') && (
+          <span className="text-red-500 ml-2">⚠️ Token contract not found</span>
+        )}
       </div>
       {renderForm()}
     </div>

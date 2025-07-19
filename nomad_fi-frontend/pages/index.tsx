@@ -13,6 +13,33 @@ import {
 import { useReadContract, useWatchContractEvent } from "wagmi";
 import type { Log } from "viem";
 
+// Helper function to convert BigInt values to strings for JSON serialization
+function convertBigIntToString(obj: any): any {
+  if (obj === null || obj === undefined) {
+    return obj;
+  }
+  
+  if (typeof obj === 'bigint') {
+    return obj.toString();
+  }
+  
+  if (Array.isArray(obj)) {
+    return obj.map(convertBigIntToString);
+  }
+  
+  if (typeof obj === 'object') {
+    const result: any = {};
+    for (const key in obj) {
+      if (obj.hasOwnProperty(key)) {
+        result[key] = convertBigIntToString(obj[key]);
+      }
+    }
+    return result;
+  }
+  
+  return obj;
+}
+
 const RISK_CATEGORIES = ["Very Low", "Low", "Medium", "High", "Very High"];
 
 const CHAIN_NAMES: Record<number, string> = {
@@ -132,7 +159,7 @@ export default function HomePage() {
           {transactionHistory.length === 0 && <li className="text-gray-500">No events yet.</li>}
           {transactionHistory.map((log, idx) => (
             <li key={(log.transactionHash ?? "nohash") + idx} className="mb-2">
-              <pre className="text-xs bg-gray-100 p-2 rounded overflow-x-auto">{JSON.stringify(log, null, 2)}</pre>
+              <pre className="text-xs bg-gray-100 p-2 rounded overflow-x-auto">{JSON.stringify(convertBigIntToString(log), null, 2)}</pre>
             </li>
           ))}
         </ul>

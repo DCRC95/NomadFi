@@ -16,7 +16,7 @@ async function main() {
 
   // --- CONSTANTS ---
   // Sepolia Aave V3 USDC
-  const USDC_SEPOLIA = "0x65aFADD39029741B3b8f0756952C74678c9cEC93";
+  const USDC_SEPOLIA = "0x94a9d9ac8a22534e3faca9f4e7f2e2cf85d5e4c8";
   const aUSDC_SEPOLIA = "0x2271e3Fef9e15046d09E1d78a8FF038c691E9Cf9";
 
   // Amoy Mock
@@ -68,6 +68,7 @@ async function main() {
     USDC_SEPOLIA,
     aaveYieldStrategy.target,
     "Aave V3 USDC Yield",
+    11155111, // Sepolia chainId
     STRATEGY_TYPE_AAVE
   )).wait();
   console.log("AaveV3USDCStrategy registered.");
@@ -80,6 +81,7 @@ async function main() {
     AMOY_MOCK_ERC20,
     AMOY_MOCK_YIELD_STRATEGY,
     "Mock Amoy Yield",
+    80002, // Amoy chainId
     STRATEGY_TYPE_MOCK
   )).wait();
   console.log("AmoyMockStrategy registered.");
@@ -92,6 +94,7 @@ async function main() {
     SEPOLIA_MOCK_ERC20,
     SEPOLIA_MOCK_YIELD_STRATEGY,
     "Mock Sepolia Yield",
+    11155111, // Sepolia chainId
     STRATEGY_TYPE_MOCK
   )).wait();
   console.log("SepoliaMockStrategy registered.");
