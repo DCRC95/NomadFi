@@ -18,6 +18,22 @@ export default defineConfig({
           name: 'YieldAggregator',
           chainId: 11155111, // Sepolia
         },
+        {
+          name: 'CompoundWETHStrategy',
+          chainId: 11155111, // Sepolia
+        },
+        {
+          name: 'MockERC20',
+          chainId: 31337, // Hardhat
+        },
+        {
+          name: 'MockYieldStrategy',
+          chainId: 31337, // Hardhat
+        },
+        {
+          name: 'YieldAggregator',
+          chainId: 31337, // Hardhat
+        },
       ],
     }),
   ],

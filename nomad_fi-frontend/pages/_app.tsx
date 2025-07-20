@@ -50,14 +50,15 @@ const sepolia = {
   testnet: true,
 };
 
-const projectId = process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID || "";
+const projectId = process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID || "YOUR_WALLETCONNECT_PROJECT_ID";
 
 const config = getDefaultConfig({
   appName: "PastoralFi",
   projectId,
-  chains: [polygonAmoy, sepolia], // Only testnets for demo
+  chains: [hardhat, polygonAmoy, sepolia], // Include Hardhat for local testing
   ssr: false,
   transports: {
+    [hardhat.id]: http(hardhat.rpcUrls.default.http[0]),
     [polygonAmoy.id]: http(polygonAmoy.rpcUrls.default.http[0]),
     [sepolia.id]: http(sepolia.rpcUrls.default.http[0]),
   },

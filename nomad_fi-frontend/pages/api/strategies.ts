@@ -1,133 +1,214 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { ethers } from 'ethers';
 import YIELD_AGGREGATOR_ABI_JSON from '../../src/abi/YieldAggregator.json';
-import MOCK_YIELD_STRATEGY_ABI_JSON from '../../src/abi/MockYieldStrategy.json';
-import AAVE_YIELD_STRATEGY_ABI_JSON from '../../src/abi/AAVEYieldStrategy.json';
+import { getYieldAggregatorAddress } from '../../src/lib/addresses';
 
 const YIELD_AGGREGATOR_ABI = (YIELD_AGGREGATOR_ABI_JSON as any).abi || YIELD_AGGREGATOR_ABI_JSON;
-const MOCK_YIELD_STRATEGY_ABI = (MOCK_YIELD_STRATEGY_ABI_JSON as any).abi || MOCK_YIELD_STRATEGY_ABI_JSON;
-const AAVE_YIELD_STRATEGY_ABI = (AAVE_YIELD_STRATEGY_ABI_JSON as any).abi || AAVE_YIELD_STRATEGY_ABI_JSON;
-
-const SEPOLIA_AGGREGATOR_ADDRESS = process.env.SEPOLIA_AGGREGATOR_ADDRESS || "0x6624E8D32CA3f4Ae85814496340B64Ac38E1799C";
 
 const CHAIN_CONFIGS = [
   {
-    chainId: 80002,
-    name: 'Polygon Amoy',
-    rpcUrl: process.env.AMOY_RPC_URL,
-  },
-  {
     chainId: 11155111,
     name: 'Ethereum Sepolia',
-    rpcUrl: process.env.SEPOLIA_RPC_URL,
+    rpcUrl: process.env.SEPOLIA_RPC_URL || "https://ethereum-sepolia.publicnode.com",
+    aggregatorAddress: getYieldAggregatorAddress(11155111),
   },
-].filter((c) => !!c.rpcUrl);
+  // Note: Hardhat Network (31337) is skipped when not running locally
+  // Note: Amoy (80002) has OLD_YieldAggregator, not the new one
+].filter((c) => !!c.rpcUrl && !!c.aggregatorAddress);
 
 const PROVIDERS: Record<number, ethers.JsonRpcProvider> = {};
 for (const chain of CHAIN_CONFIGS) {
-  PROVIDERS[chain.chainId] = new ethers.JsonRpcProvider(chain.rpcUrl);
-}
-
-function serializeStrategyInfo(info: any) {
-  if (!info || typeof info !== 'object') return info;
-  return {
-    tokenAddress: info.tokenAddress,
-    strategyAddress: info.strategyAddress,
-    name: info.name,
-    chainId: typeof info.chainId === 'bigint' ? Number(info.chainId) : info.chainId,
-    strategyType: typeof info.strategyType === 'bigint' ? Number(info.strategyType) : info.strategyType,
-    isActive: info.isActive,
-  };
+  try {
+    const provider = new ethers.JsonRpcProvider(chain.rpcUrl);
+    PROVIDERS[chain.chainId] = provider;
+  } catch (error) {
+    console.error(`Failed to create provider for ${chain.name}:`, error);
+  }
 }
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  if (!SEPOLIA_AGGREGATOR_ADDRESS || !process.env.SEPOLIA_RPC_URL) {
-    return res.status(500).json({ error: 'Missing SEPOLIA_AGGREGATOR_ADDRESS or SEPOLIA_RPC_URL in environment.' });
+  const { walletAddress } = req.query; // Get wallet address from query params
+  
+  let allStrategies: any[] = [];
+
+  // Try to fetch strategies from each chain
+  for (let i = 0; i < CHAIN_CONFIGS.length; i++) {
+    const chain = CHAIN_CONFIGS[i];
+    
+    // Add delay between chains to avoid rate limiting
+    if (i > 0) {
+      await new Promise(resolve => setTimeout(resolve, 1000)); // 1 second delay
+    }
+    
+    try {
+      const provider = PROVIDERS[chain.chainId];
+      const aggregator = new ethers.Contract(chain.aggregatorAddress!, YIELD_AGGREGATOR_ABI, provider);
+      
+      // Add delay before RPC call
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      let strategyIds: string[] = [];
+      try {
+        strategyIds = await aggregator.getAllStrategyIds();
+        console.log(`[strategies API] Found ${strategyIds.length} strategies on ${chain.name}`);
+      } catch (err) {
+        console.log(`[strategies API] No strategies found on ${chain.name}`);
+        continue; // Skip to next chain if no strategies found
+      }
+  
+      // Get batch strategy data for all strategies at once
+      try {
+        console.log(`[strategies API] Getting batch strategy data for ${strategyIds.length} strategies on ${chain.name}`);
+        const strategyDataArray = await aggregator.getBatchStrategyData(strategyIds);
+        
+        // Process each strategy
+        for (let j = 0; j < strategyDataArray.length; j++) {
+          const strategyData = strategyDataArray[j];
+          const strategyId = strategyIds[j];
+          
+          // Get user data if wallet address is provided
+          let userData = null;
+          if (walletAddress && typeof walletAddress === 'string') {
+            try {
+              userData = await aggregator.getUserData(walletAddress, strategyId);
+            } catch (userDataErr) {
+              console.error(`[strategies API] Error getting user data for strategy ${strategyId}:`, userDataErr);
+            }
+          }
+          
+          // Get additional strategy info
+          let strategyInfo = null;
+          try {
+            strategyInfo = await aggregator.getStrategyInfo(strategyId);
+          } catch (strategyInfoErr) {
+            console.error(`[strategies API] Error getting strategy info for ${strategyId}:`, strategyInfoErr);
+          }
+          
+                     // Helper function to safely convert BigInt to string
+           const safeToString = (value: any): string => {
+             if (typeof value === 'bigint') return value.toString();
+             if (value === null || value === undefined) return "0";
+             return value.toString();
+           };
+
+           // Build strategy object
+           const strategy = {
+             id: strategyId.toString(),
+             chainId: chain.chainId,
+             chainName: chain.name,
+             name: strategyData.name || strategyInfo?.name || `Strategy ${strategyId}`,
+             description: `${strategyData.name || 'Strategy'} on ${chain.name}`,
+             tokenAddress: strategyData.tokenAddress,
+             strategyAddress: strategyData.strategyAddress,
+             address: strategyData.strategyAddress, // For compatibility
+             strategyType: Number(strategyData.strategyType),
+             isActive: strategyData.isActive,
+             apy: strategyData.apy ? safeToString(strategyData.apy) : null,
+             tvl: safeToString(strategyData.totalValueLocked),
+             totalDeposits: safeToString(strategyData.totalDeposits),
+             // User-specific data
+             currentBalance: userData ? safeToString(userData.balance) : "0",
+             walletBalance: userData ? safeToString(userData.balance) : null,
+             depositedAmount: userData ? safeToString(userData.depositedAmount) : "0",
+             allowance: userData ? safeToString(userData.allowance) : "0",
+             needsApproval: userData ? userData.needsApproval : false,
+             // Additional data from strategy info
+             underlyingToken: strategyData.tokenAddress,
+             aToken: null, // This would need to be fetched from individual strategy contracts if needed
+           };
+          
+          allStrategies.push(strategy);
+        }
+        
+        console.log(`[strategies API] Successfully processed ${strategyDataArray.length} strategies from ${chain.name}`);
+        
+      } catch (batchDataErr) {
+        console.error(`[strategies API] Error getting batch strategy data on ${chain.name}:`, batchDataErr);
+        
+        // Fallback: get data individually
+        console.log(`[strategies API] Falling back to individual strategy data fetching on ${chain.name}`);
+        
+        for (let j = 0; j < strategyIds.length; j++) {
+          const strategyId = strategyIds[j];
+          
+          try {
+            // Add delay between requests to avoid rate limiting
+            if (j > 0) {
+              await new Promise(resolve => setTimeout(resolve, 200)); // 200ms delay between strategies
+            }
+            
+            // Get strategy info
+            const strategyInfo = await aggregator.getStrategyInfo(strategyId);
+            
+            // Get APY
+            let apy = null;
+            try {
+              const apyValue = await aggregator.getStrategyAPY(strategyId);
+              apy = apyValue.toString();
+            } catch (apyErr) {
+              console.error(`[strategies API] Error getting APY for strategy ${strategyId}:`, apyErr);
+            }
+            
+            // Get user data if wallet address is provided
+            let userData = null;
+            if (walletAddress && typeof walletAddress === 'string') {
+              try {
+                userData = await aggregator.getUserData(walletAddress, strategyId);
+              } catch (userDataErr) {
+                console.error(`[strategies API] Error getting user data for strategy ${strategyId}:`, userDataErr);
+              }
+            }
+            
+                         // Helper function to safely convert BigInt to string
+             const safeToString = (value: any): string => {
+               if (typeof value === 'bigint') return value.toString();
+               if (value === null || value === undefined) return "0";
+               return value.toString();
+             };
+
+             // Build strategy object
+             const strategy = {
+               id: strategyId.toString(),
+               chainId: chain.chainId,
+               chainName: chain.name,
+               name: strategyInfo.name || `Strategy ${strategyId}`,
+               description: `${strategyInfo.name || 'Strategy'} on ${chain.name}`,
+               tokenAddress: strategyInfo.tokenAddress,
+               strategyAddress: strategyInfo.strategyAddress,
+               address: strategyInfo.strategyAddress, // For compatibility
+               strategyType: Number(strategyInfo.strategyType),
+               isActive: strategyInfo.isActive,
+               apy: apy,
+               tvl: "0", // Would need to be calculated from deposits
+               totalDeposits: "0", // Would need to be calculated
+               // User-specific data
+               currentBalance: userData ? safeToString(userData.balance) : "0",
+               walletBalance: userData ? safeToString(userData.balance) : null,
+               depositedAmount: userData ? safeToString(userData.depositedAmount) : "0",
+               allowance: userData ? safeToString(userData.allowance) : "0",
+               needsApproval: userData ? userData.needsApproval : false,
+               // Additional data
+               underlyingToken: strategyInfo.tokenAddress,
+               aToken: null, // This would need to be fetched from individual strategy contracts if needed
+             };
+            
+            allStrategies.push(strategy);
+            
+          } catch (strategyErr) {
+            console.error(`[strategies API] Error processing strategy ${strategyId} on ${chain.name}:`, strategyErr);
+          }
+        }
+      }
+      
+    } catch (error) {
+      console.error(`[strategies API] Error connecting to ${chain.name}:`, error);
+    }
   }
 
-  try {
-    const sepoliaProvider = new ethers.JsonRpcProvider(process.env.SEPOLIA_RPC_URL);
-    const aggregator = new ethers.Contract(SEPOLIA_AGGREGATOR_ADDRESS, YIELD_AGGREGATOR_ABI, sepoliaProvider);
-    let allStrategies: any[] = [];
-    let strategyIds: string[] = [];
-    try {
-      strategyIds = await aggregator.getAllStrategyIds();
-    } catch (err) {
-      console.error('[strategies API] Error fetching strategy IDs from Sepolia aggregator:', err);
-      return res.status(500).json({ error: 'Failed to fetch strategy IDs from Sepolia aggregator.' });
-    }
-    for (const id of strategyIds) {
-      try {
-        // --- RATE LIMITING: Add 100ms delay between requests to avoid Infura rate limits ---
-        await new Promise(resolve => setTimeout(resolve, 100));
-        const info = await aggregator.getStrategyInfo(id);
-        const strategy = serializeStrategyInfo(info);
-        const chainId = strategy.chainId || 11155111;
-        const provider = PROVIDERS[chainId] || sepoliaProvider;
-        let chainName = CHAIN_CONFIGS.find((c) => c.chainId === chainId)?.name || `Chain ${chainId}`;
-        let apy = null;
-        let underlyingToken = null;
-        let aToken = null;
-        let currentBalance = null;
-        if (provider && strategy.strategyAddress && strategy.strategyAddress.startsWith('0x') && strategy.strategyAddress.length === 42) {
-          try {
-            let strategyContract, apyRaw;
-            if (typeof strategy.name === 'string' && strategy.name.toLowerCase().includes('aave')) {
-              // Debug logs for APY fetch
-              let providerUrl = (provider as any)?.connection?.url || (provider as any)?.connection || provider?.toString();
-              console.log(`[strategies API][DEBUG] Provider URL:`, providerUrl);
-              console.log(`[strategies API][DEBUG] Strategy address:`, strategy.strategyAddress);
-              if (Array.isArray(AAVE_YIELD_STRATEGY_ABI)) {
-                console.log(`[strategies API][DEBUG] ABI function names:`, AAVE_YIELD_STRATEGY_ABI.map((f: any) => f?.name).filter(Boolean));
-              }
-              strategyContract = new ethers.Contract(
-                strategy.strategyAddress,
-                AAVE_YIELD_STRATEGY_ABI,
-                provider
-              );
-              try {
-                apyRaw = await strategyContract.apy();
-                apy = typeof apyRaw === 'bigint' ? apyRaw.toString() : apyRaw;
-              } catch (apyCallErr) {
-                console.error(`[strategies API][DEBUG] Error calling apy()`, apyCallErr);
-                apy = null;
-              }
-              try { underlyingToken = await strategyContract.underlyingToken(); } catch (e) { console.error('[strategies API][DEBUG] Error fetching underlyingToken', e); }
-              try { aToken = await strategyContract.aToken(); } catch (e) { console.error('[strategies API][DEBUG] Error fetching aToken', e); }
-              try { const balRaw = await strategyContract.getCurrentBalance(); currentBalance = typeof balRaw === 'bigint' ? balRaw.toString() : balRaw; } catch (e) { console.error('[strategies API][DEBUG] Error fetching getCurrentBalance', e); }
-            } else {
-              strategyContract = new ethers.Contract(
-                strategy.strategyAddress,
-                MOCK_YIELD_STRATEGY_ABI,
-                provider
-              );
-              apyRaw = await strategyContract.getAPY();
-              apy = typeof apyRaw === 'bigint' ? apyRaw.toString() : apyRaw;
-            }
-          } catch (apyErr) {
-            console.error(`[strategies API] Error fetching APY for strategy ${id} on ${chainName}:`, apyErr);
-            apy = null;
-          }
-        } else {
-          console.warn(`[strategies API] No provider or invalid address for strategy ${id} on ${chainName}`);
-        }
-        allStrategies.push({
-          id: id.toString(),
-          chainId,
-          chainName,
-          apy,
-          underlyingToken,
-          aToken,
-          currentBalance,
-          ...strategy,
-        });
-      } catch (err) {
-        console.error(`[strategies API] Error fetching strategy info for id ${id}:`, err);
-      }
-    }
-    res.status(200).json(allStrategies);
-  } catch (error) {
-    console.error('[strategies API] Unexpected error:', error);
-    res.status(500).json({ error: 'Failed to fetch strategies.' });
+  // If no strategies found from any chain, return empty array
+  if (allStrategies.length === 0) {
+    console.log('[strategies API] No strategies found from any chain');
   }
+  
+  res.status(200).json(allStrategies);
 } 

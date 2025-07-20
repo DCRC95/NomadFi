@@ -103,6 +103,75 @@ export const aaveYieldStrategyAbi = [
 ] as const
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// CompoundWETHStrategy
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+export const compoundWethStrategyAbi = [
+  {
+    type: 'constructor',
+    inputs: [
+      { name: '_compoundWETHComet', internalType: 'address', type: 'address' },
+      { name: '_wethToken', internalType: 'address', type: 'address' },
+    ],
+    stateMutability: 'nonpayable',
+  },
+  {
+    type: 'function',
+    inputs: [],
+    name: 'SECONDS_PER_YEAR',
+    outputs: [{ name: '', internalType: 'uint256', type: 'uint256' }],
+    stateMutability: 'view',
+  },
+  {
+    type: 'function',
+    inputs: [],
+    name: 'apy',
+    outputs: [{ name: '', internalType: 'uint256', type: 'uint256' }],
+    stateMutability: 'view',
+  },
+  {
+    type: 'function',
+    inputs: [],
+    name: 'compoundComet',
+    outputs: [
+      { name: '', internalType: 'contract ICompoundComet', type: 'address' },
+    ],
+    stateMutability: 'view',
+  },
+  {
+    type: 'function',
+    inputs: [{ name: 'amount', internalType: 'uint256', type: 'uint256' }],
+    name: 'depositToProtocol',
+    outputs: [{ name: 'success', internalType: 'bool', type: 'bool' }],
+    stateMutability: 'nonpayable',
+  },
+  {
+    type: 'function',
+    inputs: [],
+    name: 'getCurrentBalance',
+    outputs: [{ name: '', internalType: 'uint256', type: 'uint256' }],
+    stateMutability: 'view',
+  },
+  {
+    type: 'function',
+    inputs: [],
+    name: 'underlyingToken',
+    outputs: [{ name: '', internalType: 'contract IERC20', type: 'address' }],
+    stateMutability: 'view',
+  },
+  {
+    type: 'function',
+    inputs: [
+      { name: 'amount', internalType: 'uint256', type: 'uint256' },
+      { name: 'to', internalType: 'address', type: 'address' },
+    ],
+    name: 'withdrawFromProtocol',
+    outputs: [{ name: 'success', internalType: 'bool', type: 'bool' }],
+    stateMutability: 'nonpayable',
+  },
+] as const
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // ERC20
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -502,6 +571,99 @@ export const iAaveV3LendingPoolAddressesProviderAbi = [
     name: 'getPoolDataProvider',
     outputs: [{ name: '', internalType: 'address', type: 'address' }],
     stateMutability: 'view',
+  },
+] as const
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// ICompoundComet
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+export const iCompoundCometAbi = [
+  {
+    type: 'function',
+    inputs: [{ name: 'account', internalType: 'address', type: 'address' }],
+    name: 'balanceOf',
+    outputs: [{ name: '', internalType: 'uint256', type: 'uint256' }],
+    stateMutability: 'view',
+  },
+  {
+    type: 'function',
+    inputs: [],
+    name: 'baseToken',
+    outputs: [{ name: '', internalType: 'address', type: 'address' }],
+    stateMutability: 'view',
+  },
+  {
+    type: 'function',
+    inputs: [{ name: 'asset', internalType: 'address', type: 'address' }],
+    name: 'getBorrowRate',
+    outputs: [{ name: '', internalType: 'uint256', type: 'uint256' }],
+    stateMutability: 'view',
+  },
+  {
+    type: 'function',
+    inputs: [{ name: 'asset', internalType: 'address', type: 'address' }],
+    name: 'getSupplyRate',
+    outputs: [{ name: '', internalType: 'uint256', type: 'uint256' }],
+    stateMutability: 'view',
+  },
+  {
+    type: 'function',
+    inputs: [
+      { name: 'asset', internalType: 'address', type: 'address' },
+      { name: 'amount', internalType: 'uint256', type: 'uint256' },
+    ],
+    name: 'supply',
+    outputs: [{ name: '', internalType: 'uint256', type: 'uint256' }],
+    stateMutability: 'nonpayable',
+  },
+  {
+    type: 'function',
+    inputs: [
+      { name: 'asset', internalType: 'address', type: 'address' },
+      { name: 'amount', internalType: 'uint256', type: 'uint256' },
+    ],
+    name: 'withdraw',
+    outputs: [{ name: '', internalType: 'uint256', type: 'uint256' }],
+    stateMutability: 'nonpayable',
+  },
+] as const
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// ICompoundYieldStrategy
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+export const iCompoundYieldStrategyAbi = [
+  {
+    type: 'function',
+    inputs: [],
+    name: 'apy',
+    outputs: [{ name: '', internalType: 'uint256', type: 'uint256' }],
+    stateMutability: 'view',
+  },
+  {
+    type: 'function',
+    inputs: [{ name: 'amount', internalType: 'uint256', type: 'uint256' }],
+    name: 'depositToProtocol',
+    outputs: [{ name: 'success', internalType: 'bool', type: 'bool' }],
+    stateMutability: 'nonpayable',
+  },
+  {
+    type: 'function',
+    inputs: [],
+    name: 'getCurrentBalance',
+    outputs: [{ name: '', internalType: 'uint256', type: 'uint256' }],
+    stateMutability: 'view',
+  },
+  {
+    type: 'function',
+    inputs: [
+      { name: 'amount', internalType: 'uint256', type: 'uint256' },
+      { name: 'to', internalType: 'address', type: 'address' },
+    ],
+    name: 'withdrawFromProtocol',
+    outputs: [{ name: 'success', internalType: 'bool', type: 'bool' }],
+    stateMutability: 'nonpayable',
   },
 ] as const
 
@@ -1071,6 +1233,403 @@ export const ierc721ErrorsAbi = [
 ] as const
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// IMockYieldStrategy
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+export const iMockYieldStrategyAbi = [
+  {
+    type: 'function',
+    inputs: [{ name: 'amount', internalType: 'uint256', type: 'uint256' }],
+    name: 'deposit',
+    outputs: [],
+    stateMutability: 'nonpayable',
+  },
+  {
+    type: 'function',
+    inputs: [],
+    name: 'getAPY',
+    outputs: [{ name: '', internalType: 'uint256', type: 'uint256' }],
+    stateMutability: 'view',
+  },
+  {
+    type: 'function',
+    inputs: [],
+    name: 'getCurrentBalance',
+    outputs: [{ name: '', internalType: 'uint256', type: 'uint256' }],
+    stateMutability: 'view',
+  },
+  {
+    type: 'function',
+    inputs: [{ name: 'amount', internalType: 'uint256', type: 'uint256' }],
+    name: 'withdraw',
+    outputs: [],
+    stateMutability: 'nonpayable',
+  },
+] as const
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// IStrategyManager
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+export const iStrategyManagerAbi = [
+  {
+    type: 'event',
+    anonymous: false,
+    inputs: [
+      { name: 'user', internalType: 'address', type: 'address', indexed: true },
+      {
+        name: 'token',
+        internalType: 'address',
+        type: 'address',
+        indexed: true,
+      },
+      {
+        name: 'amount',
+        internalType: 'uint256',
+        type: 'uint256',
+        indexed: false,
+      },
+      {
+        name: 'strategyId',
+        internalType: 'uint256',
+        type: 'uint256',
+        indexed: true,
+      },
+      {
+        name: 'timestamp',
+        internalType: 'uint256',
+        type: 'uint256',
+        indexed: false,
+      },
+    ],
+    name: 'Deposit',
+  },
+  {
+    type: 'event',
+    anonymous: false,
+    inputs: [
+      { name: 'id', internalType: 'uint256', type: 'uint256', indexed: true },
+      {
+        name: 'tokenAddress',
+        internalType: 'address',
+        type: 'address',
+        indexed: true,
+      },
+      {
+        name: 'strategyAddress',
+        internalType: 'address',
+        type: 'address',
+        indexed: false,
+      },
+      { name: 'name', internalType: 'string', type: 'string', indexed: false },
+      {
+        name: 'strategyType',
+        internalType: 'enum IStrategyManager.StrategyType',
+        type: 'uint8',
+        indexed: false,
+      },
+    ],
+    name: 'StrategyAdded',
+  },
+  {
+    type: 'event',
+    anonymous: false,
+    inputs: [
+      {
+        name: 'strategyId',
+        internalType: 'uint256',
+        type: 'uint256',
+        indexed: true,
+      },
+    ],
+    name: 'StrategyRemoved',
+  },
+  {
+    type: 'event',
+    anonymous: false,
+    inputs: [
+      {
+        name: 'tokenAddress',
+        internalType: 'address',
+        type: 'address',
+        indexed: true,
+      },
+    ],
+    name: 'TokenSupported',
+  },
+  {
+    type: 'event',
+    anonymous: false,
+    inputs: [
+      {
+        name: 'tokenAddress',
+        internalType: 'address',
+        type: 'address',
+        indexed: true,
+      },
+    ],
+    name: 'TokenUnSupported',
+  },
+  {
+    type: 'event',
+    anonymous: false,
+    inputs: [
+      { name: 'user', internalType: 'address', type: 'address', indexed: true },
+      {
+        name: 'token',
+        internalType: 'address',
+        type: 'address',
+        indexed: true,
+      },
+      {
+        name: 'amount',
+        internalType: 'uint256',
+        type: 'uint256',
+        indexed: false,
+      },
+      {
+        name: 'strategyId',
+        internalType: 'uint256',
+        type: 'uint256',
+        indexed: true,
+      },
+      {
+        name: 'timestamp',
+        internalType: 'uint256',
+        type: 'uint256',
+        indexed: false,
+      },
+    ],
+    name: 'Withdrawal',
+  },
+  {
+    type: 'function',
+    inputs: [
+      { name: '_id', internalType: 'uint256', type: 'uint256' },
+      { name: '_tokenAddress', internalType: 'address', type: 'address' },
+      { name: '_strategyAddress', internalType: 'address', type: 'address' },
+      { name: '_name', internalType: 'string', type: 'string' },
+      { name: '_chainId', internalType: 'uint256', type: 'uint256' },
+      {
+        name: '_strategyType',
+        internalType: 'enum IStrategyManager.StrategyType',
+        type: 'uint8',
+      },
+    ],
+    name: 'addStrategy',
+    outputs: [],
+    stateMutability: 'nonpayable',
+  },
+  {
+    type: 'function',
+    inputs: [
+      { name: '_tokenAddress', internalType: 'address', type: 'address' },
+    ],
+    name: 'addSupportedToken',
+    outputs: [],
+    stateMutability: 'nonpayable',
+  },
+  {
+    type: 'function',
+    inputs: [
+      { name: '_tokenAddress', internalType: 'address', type: 'address' },
+      { name: '_amount', internalType: 'uint256', type: 'uint256' },
+      { name: '_strategyId', internalType: 'uint256', type: 'uint256' },
+    ],
+    name: 'deposit',
+    outputs: [],
+    stateMutability: 'nonpayable',
+  },
+  {
+    type: 'function',
+    inputs: [],
+    name: 'getAllStrategyIds',
+    outputs: [{ name: '', internalType: 'uint256[]', type: 'uint256[]' }],
+    stateMutability: 'view',
+  },
+  {
+    type: 'function',
+    inputs: [
+      { name: '_strategyIds', internalType: 'uint256[]', type: 'uint256[]' },
+    ],
+    name: 'getBatchStrategyData',
+    outputs: [
+      {
+        name: '',
+        internalType: 'struct IStrategyManager.StrategyData[]',
+        type: 'tuple[]',
+        components: [
+          { name: 'tokenAddress', internalType: 'address', type: 'address' },
+          { name: 'strategyAddress', internalType: 'address', type: 'address' },
+          { name: 'name', internalType: 'string', type: 'string' },
+          { name: 'chainId', internalType: 'uint256', type: 'uint256' },
+          {
+            name: 'strategyType',
+            internalType: 'enum IStrategyManager.StrategyType',
+            type: 'uint8',
+          },
+          { name: 'isActive', internalType: 'bool', type: 'bool' },
+          { name: 'apy', internalType: 'uint256', type: 'uint256' },
+          { name: 'totalDeposits', internalType: 'uint256', type: 'uint256' },
+          {
+            name: 'totalValueLocked',
+            internalType: 'uint256',
+            type: 'uint256',
+          },
+        ],
+      },
+    ],
+    stateMutability: 'view',
+  },
+  {
+    type: 'function',
+    inputs: [
+      { name: '_user', internalType: 'address', type: 'address' },
+      { name: '_strategyIds', internalType: 'uint256[]', type: 'uint256[]' },
+    ],
+    name: 'getBatchUserData',
+    outputs: [
+      {
+        name: '',
+        internalType: 'struct IStrategyManager.UserData[]',
+        type: 'tuple[]',
+        components: [
+          { name: 'balance', internalType: 'uint256', type: 'uint256' },
+          { name: 'allowance', internalType: 'uint256', type: 'uint256' },
+          { name: 'depositedAmount', internalType: 'uint256', type: 'uint256' },
+          { name: 'needsApproval', internalType: 'bool', type: 'bool' },
+        ],
+      },
+    ],
+    stateMutability: 'view',
+  },
+  {
+    type: 'function',
+    inputs: [{ name: '_strategyId', internalType: 'uint256', type: 'uint256' }],
+    name: 'getStrategyAPY',
+    outputs: [{ name: '', internalType: 'uint256', type: 'uint256' }],
+    stateMutability: 'view',
+  },
+  {
+    type: 'function',
+    inputs: [{ name: '_strategyId', internalType: 'uint256', type: 'uint256' }],
+    name: 'getStrategyData',
+    outputs: [
+      {
+        name: '',
+        internalType: 'struct IStrategyManager.StrategyData',
+        type: 'tuple',
+        components: [
+          { name: 'tokenAddress', internalType: 'address', type: 'address' },
+          { name: 'strategyAddress', internalType: 'address', type: 'address' },
+          { name: 'name', internalType: 'string', type: 'string' },
+          { name: 'chainId', internalType: 'uint256', type: 'uint256' },
+          {
+            name: 'strategyType',
+            internalType: 'enum IStrategyManager.StrategyType',
+            type: 'uint8',
+          },
+          { name: 'isActive', internalType: 'bool', type: 'bool' },
+          { name: 'apy', internalType: 'uint256', type: 'uint256' },
+          { name: 'totalDeposits', internalType: 'uint256', type: 'uint256' },
+          {
+            name: 'totalValueLocked',
+            internalType: 'uint256',
+            type: 'uint256',
+          },
+        ],
+      },
+    ],
+    stateMutability: 'view',
+  },
+  {
+    type: 'function',
+    inputs: [{ name: '_strategyId', internalType: 'uint256', type: 'uint256' }],
+    name: 'getStrategyInfo',
+    outputs: [
+      {
+        name: '',
+        internalType: 'struct IStrategyManager.StrategyInfo',
+        type: 'tuple',
+        components: [
+          { name: 'tokenAddress', internalType: 'address', type: 'address' },
+          { name: 'strategyAddress', internalType: 'address', type: 'address' },
+          { name: 'name', internalType: 'string', type: 'string' },
+          { name: 'chainId', internalType: 'uint256', type: 'uint256' },
+          {
+            name: 'strategyType',
+            internalType: 'enum IStrategyManager.StrategyType',
+            type: 'uint8',
+          },
+          { name: 'isActive', internalType: 'bool', type: 'bool' },
+        ],
+      },
+    ],
+    stateMutability: 'view',
+  },
+  {
+    type: 'function',
+    inputs: [
+      { name: '_user', internalType: 'address', type: 'address' },
+      { name: '_strategyId', internalType: 'uint256', type: 'uint256' },
+    ],
+    name: 'getUserData',
+    outputs: [
+      {
+        name: '',
+        internalType: 'struct IStrategyManager.UserData',
+        type: 'tuple',
+        components: [
+          { name: 'balance', internalType: 'uint256', type: 'uint256' },
+          { name: 'allowance', internalType: 'uint256', type: 'uint256' },
+          { name: 'depositedAmount', internalType: 'uint256', type: 'uint256' },
+          { name: 'needsApproval', internalType: 'bool', type: 'bool' },
+        ],
+      },
+    ],
+    stateMutability: 'view',
+  },
+  {
+    type: 'function',
+    inputs: [
+      { name: '_strategyId', internalType: 'uint256', type: 'uint256' },
+      { name: '_user', internalType: 'address', type: 'address' },
+      { name: '_tokenAddress', internalType: 'address', type: 'address' },
+    ],
+    name: 'getUserDeposit',
+    outputs: [{ name: '', internalType: 'uint256', type: 'uint256' }],
+    stateMutability: 'view',
+  },
+  {
+    type: 'function',
+    inputs: [{ name: '_strategyId', internalType: 'uint256', type: 'uint256' }],
+    name: 'removeStrategy',
+    outputs: [],
+    stateMutability: 'nonpayable',
+  },
+  {
+    type: 'function',
+    inputs: [
+      { name: '_tokenAddress', internalType: 'address', type: 'address' },
+    ],
+    name: 'removeSupportedToken',
+    outputs: [],
+    stateMutability: 'nonpayable',
+  },
+  {
+    type: 'function',
+    inputs: [
+      { name: '_tokenAddress', internalType: 'address', type: 'address' },
+      { name: '_amount', internalType: 'uint256', type: 'uint256' },
+      { name: '_strategyId', internalType: 'uint256', type: 'uint256' },
+    ],
+    name: 'withdraw',
+    outputs: [],
+    stateMutability: 'nonpayable',
+  },
+] as const
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Lock
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -1432,6 +1991,39 @@ export const reentrancyGuardAbi = [
 ] as const
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// SafeCast
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+export const safeCastAbi = [
+  {
+    type: 'error',
+    inputs: [
+      { name: 'bits', internalType: 'uint8', type: 'uint8' },
+      { name: 'value', internalType: 'int256', type: 'int256' },
+    ],
+    name: 'SafeCastOverflowedIntDowncast',
+  },
+  {
+    type: 'error',
+    inputs: [{ name: 'value', internalType: 'int256', type: 'int256' }],
+    name: 'SafeCastOverflowedIntToUint',
+  },
+  {
+    type: 'error',
+    inputs: [
+      { name: 'bits', internalType: 'uint8', type: 'uint8' },
+      { name: 'value', internalType: 'uint256', type: 'uint256' },
+    ],
+    name: 'SafeCastOverflowedUintDowncast',
+  },
+  {
+    type: 'error',
+    inputs: [{ name: 'value', internalType: 'uint256', type: 'uint256' }],
+    name: 'SafeCastOverflowedUintToInt',
+  },
+] as const
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // SafeERC20
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -1471,6 +2063,23 @@ export const simpleStorageAbi = [
     outputs: [],
     stateMutability: 'nonpayable',
   },
+] as const
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Strings
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+export const stringsAbi = [
+  {
+    type: 'error',
+    inputs: [
+      { name: 'value', internalType: 'uint256', type: 'uint256' },
+      { name: 'length', internalType: 'uint256', type: 'uint256' },
+    ],
+    name: 'StringsInsufficientHexLength',
+  },
+  { type: 'error', inputs: [], name: 'StringsInvalidAddressFormat' },
+  { type: 'error', inputs: [], name: 'StringsInvalidChar' },
 ] as const
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -1576,7 +2185,7 @@ export const yieldAggregatorAbi = [
       { name: 'name', internalType: 'string', type: 'string', indexed: false },
       {
         name: 'strategyType',
-        internalType: 'enum YieldAggregator.StrategyType',
+        internalType: 'enum IStrategyManager.StrategyType',
         type: 'uint8',
         indexed: false,
       },
@@ -1661,9 +2270,10 @@ export const yieldAggregatorAbi = [
       { name: '_tokenAddress', internalType: 'address', type: 'address' },
       { name: '_strategyAddress', internalType: 'address', type: 'address' },
       { name: '_name', internalType: 'string', type: 'string' },
+      { name: '_chainId', internalType: 'uint256', type: 'uint256' },
       {
         name: '_strategyType',
-        internalType: 'enum YieldAggregator.StrategyType',
+        internalType: 'enum IStrategyManager.StrategyType',
         type: 'uint8',
       },
     ],
@@ -1700,9 +2310,97 @@ export const yieldAggregatorAbi = [
   },
   {
     type: 'function',
+    inputs: [
+      { name: '_strategyIds', internalType: 'uint256[]', type: 'uint256[]' },
+    ],
+    name: 'getBatchStrategyData',
+    outputs: [
+      {
+        name: '',
+        internalType: 'struct IStrategyManager.StrategyData[]',
+        type: 'tuple[]',
+        components: [
+          { name: 'tokenAddress', internalType: 'address', type: 'address' },
+          { name: 'strategyAddress', internalType: 'address', type: 'address' },
+          { name: 'name', internalType: 'string', type: 'string' },
+          { name: 'chainId', internalType: 'uint256', type: 'uint256' },
+          {
+            name: 'strategyType',
+            internalType: 'enum IStrategyManager.StrategyType',
+            type: 'uint8',
+          },
+          { name: 'isActive', internalType: 'bool', type: 'bool' },
+          { name: 'apy', internalType: 'uint256', type: 'uint256' },
+          { name: 'totalDeposits', internalType: 'uint256', type: 'uint256' },
+          {
+            name: 'totalValueLocked',
+            internalType: 'uint256',
+            type: 'uint256',
+          },
+        ],
+      },
+    ],
+    stateMutability: 'view',
+  },
+  {
+    type: 'function',
+    inputs: [
+      { name: '_user', internalType: 'address', type: 'address' },
+      { name: '_strategyIds', internalType: 'uint256[]', type: 'uint256[]' },
+    ],
+    name: 'getBatchUserData',
+    outputs: [
+      {
+        name: '',
+        internalType: 'struct IStrategyManager.UserData[]',
+        type: 'tuple[]',
+        components: [
+          { name: 'balance', internalType: 'uint256', type: 'uint256' },
+          { name: 'allowance', internalType: 'uint256', type: 'uint256' },
+          { name: 'depositedAmount', internalType: 'uint256', type: 'uint256' },
+          { name: 'needsApproval', internalType: 'bool', type: 'bool' },
+        ],
+      },
+    ],
+    stateMutability: 'view',
+  },
+  {
+    type: 'function',
     inputs: [{ name: '_strategyId', internalType: 'uint256', type: 'uint256' }],
     name: 'getStrategyAPY',
     outputs: [{ name: '', internalType: 'uint256', type: 'uint256' }],
+    stateMutability: 'view',
+  },
+  {
+    type: 'function',
+    inputs: [{ name: '_strategyId', internalType: 'uint256', type: 'uint256' }],
+    name: 'getStrategyData',
+    outputs: [
+      {
+        name: '',
+        internalType: 'struct IStrategyManager.StrategyData',
+        type: 'tuple',
+        components: [
+          { name: 'tokenAddress', internalType: 'address', type: 'address' },
+          { name: 'strategyAddress', internalType: 'address', type: 'address' },
+          { name: 'name', internalType: 'string', type: 'string' },
+          { name: 'chainId', internalType: 'uint256', type: 'uint256' },
+          {
+            name: 'strategyType',
+            internalType: 'enum IStrategyManager.StrategyType',
+            type: 'uint8',
+          },
+          { name: 'isActive', internalType: 'bool', type: 'bool' },
+          { name: 'apy', internalType: 'uint256', type: 'uint256' },
+          { name: 'totalDeposits', internalType: 'uint256', type: 'uint256' },
+          {
+            name: 'totalValueLocked',
+            internalType: 'uint256',
+            type: 'uint256',
+          },
+        ],
+      },
+    ],
     stateMutability: 'view',
   },
   {
@@ -1712,18 +2410,41 @@ export const yieldAggregatorAbi = [
     outputs: [
       {
         name: '',
-        internalType: 'struct YieldAggregator.StrategyInfo',
+        internalType: 'struct IStrategyManager.StrategyInfo',
         type: 'tuple',
         components: [
           { name: 'tokenAddress', internalType: 'address', type: 'address' },
           { name: 'strategyAddress', internalType: 'address', type: 'address' },
           { name: 'name', internalType: 'string', type: 'string' },
+          { name: 'chainId', internalType: 'uint256', type: 'uint256' },
           {
             name: 'strategyType',
-            internalType: 'enum YieldAggregator.StrategyType',
+            internalType: 'enum IStrategyManager.StrategyType',
             type: 'uint8',
           },
           { name: 'isActive', internalType: 'bool', type: 'bool' },
+        ],
+      },
+    ],
+    stateMutability: 'view',
+  },
+  {
+    type: 'function',
+    inputs: [
+      { name: '_user', internalType: 'address', type: 'address' },
+      { name: '_strategyId', internalType: 'uint256', type: 'uint256' },
+    ],
+    name: 'getUserData',
+    outputs: [
+      {
+        name: '',
+        internalType: 'struct IStrategyManager.UserData',
+        type: 'tuple',
+        components: [
+          { name: 'balance', internalType: 'uint256', type: 'uint256' },
+          { name: 'allowance', internalType: 'uint256', type: 'uint256' },
+          { name: 'depositedAmount', internalType: 'uint256', type: 'uint256' },
+          { name: 'needsApproval', internalType: 'bool', type: 'bool' },
         ],
       },
     ],
@@ -1785,9 +2506,10 @@ export const yieldAggregatorAbi = [
       { name: 'tokenAddress', internalType: 'address', type: 'address' },
       { name: 'strategyAddress', internalType: 'address', type: 'address' },
       { name: 'name', internalType: 'string', type: 'string' },
+      { name: 'chainId', internalType: 'uint256', type: 'uint256' },
       {
         name: 'strategyType',
-        internalType: 'enum YieldAggregator.StrategyType',
+        internalType: 'enum IStrategyManager.StrategyType',
         type: 'uint8',
       },
       { name: 'isActive', internalType: 'bool', type: 'bool' },

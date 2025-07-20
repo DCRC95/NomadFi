@@ -9,6 +9,7 @@ import "./interfaces/IAaveV3LendingPool.sol";
 import "./interfaces/IAaveV3AaveProtocolDataProvider.sol";
 import "./interfaces/IAAVEYieldStrategy.sol";
 
+// Ensure AAVEYieldStrategy implements the universal IYieldStrategy
 contract AAVEYieldStrategy is IAAVEYieldStrategy {
     using SafeERC20 for IERC20;
 
@@ -17,6 +18,9 @@ contract AAVEYieldStrategy is IAAVEYieldStrategy {
     IAaveV3AaveProtocolDataProvider public immutable AAVE_DATA_PROVIDER;
     IERC20 public immutable underlyingToken;
     IERC20 public immutable aToken;
+
+    // Seconds in a year (approx. 365 days * 24 hours * 60 minutes * 60 seconds)
+    uint256 private constant SECONDS_PER_YEAR = 31536000;
 
     constructor(
         address _aaveAddressesProvider,
@@ -44,8 +48,7 @@ contract AAVEYieldStrategy is IAAVEYieldStrategy {
         require(amount > 0, "Amount must be greater than zero");
         uint256 allowance = underlyingToken.allowance(address(this), address(AAVE_LENDING_POOL));
         if (allowance < amount) {
-            // Fallback: SafeERC20.safeApprove linter issue, using approve directly
-            // This is generally safe for protocol contracts like Aave
+            // Approve the Aave Lending Pool to spend tokens from this strategy
             underlyingToken.approve(address(AAVE_LENDING_POOL), type(uint256).max);
         }
         // Deposit into Aave V3
@@ -62,23 +65,21 @@ contract AAVEYieldStrategy is IAAVEYieldStrategy {
     }
 
     function getCurrentBalance() external view override returns (uint256) {
+        // Returns the amount of aTokens held by this strategy, which represents the supplied balance
         return aToken.balanceOf(address(this));
     }
 
     function apy() external view override returns (uint256) {
         // Get reserve data from Aave Lending Pool
-        IAaveV3LendingPool.ReserveData memory reserveData = AAVE_LENDING_POOL.getReserveData(address(underlyingToken));
+        // Note: Aave's getReserveData returns a ReserveData struct.
+        IAaveV3AaveProtocolDataProvider.ReserveData memory reserveData = AAVE_DATA_PROVIDER.getReserveData(address(underlyingToken));
 
-        // currentLiquidityRate is in RAY (1e27)
-        uint256 rayRate = reserveData.currentLiquidityRate;
-
-        // Convert RAY to a value with 18 decimals for percentage display.
-        // Formula: (rayRate * 1e18) / 1e27 = rayRate / 1e9
-        // This gives us the APY as a value where 1.0 = 100% (with 18 decimals)
-        // So, if rayRate represents 5% (0.05), the result will be 0.05 * 1e18 = 5e16
-        // To get the actual percentage, the frontend will divide by 1e18 and multiply by 100.
-        uint256 apyWith18Decimals = rayRate / 1e9; // 1e27 / 1e9 = 1e18 (scale factor for 100%)
+        // Convert RAY (1e27) scaled rate to 18 decimals and annualize.
+        // Formula: (rate_per_second_1e27 / 1e9) * SECONDS_PER_YEAR
+        // This converts the rate to 1e18 scale and then annualizes it.
+        // The result is the APY scaled by 1e18, where 1.0 * 1e18 represents 100%.
+        uint256 apyWith18Decimals = (reserveData.liquidityRate / (10**9)) * SECONDS_PER_YEAR;
 
         return apyWith18Decimals;
     }
-} 
+}

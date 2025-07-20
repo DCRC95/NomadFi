@@ -3,23 +3,41 @@ import YieldAggregatorAbi from "../abi/YieldAggregator.json" assert { type: "jso
 // @ts-ignore
 import MockYieldStrategyAbi from "../abi/MockYieldStrategy.json" assert { type: "json" };
 import { ethers } from "ethers";
+import { 
+  getYieldAggregatorAddress, 
+  getMockERC20Address, 
+  getMockYieldStrategyAddress 
+} from "./addresses";
 
 export const YIELD_AGGREGATOR_ABI = YieldAggregatorAbi.abi;
 export const MOCK_YIELD_STRATEGY_ABI = MockYieldStrategyAbi.abi;
 
-// Replace these with your actual deployed contract addresses
+// Get contract addresses from addresses.json
+export const getContractAddresses = (chainId: number) => {
+  return {
+    YieldAggregator: getYieldAggregatorAddress(chainId),
+    MockERC20: getMockERC20Address(chainId),
+    MockYieldStrategy: getMockYieldStrategyAddress(chainId),
+  };
+};
+
+// Legacy CONTRACT_ADDRESSES for backward compatibility
 export const CONTRACT_ADDRESSES: Record<number, Record<string, string>> = {
+  31337: {
+    YieldAggregator: getYieldAggregatorAddress(31337) || '',
+    MockERC20: getMockERC20Address(31337) || '',
+    MockYieldStrategy: getMockYieldStrategyAddress(31337) || '',
+  },
   80002: {
-    YieldAggregator: '0x22954D73CE88998Bc66334A6D28dDA5EfAc9cfDf',
-    MockERC20: '0xd0B01c1ce87508757FEB41C5D8b2D117a4f4c283',
-    MockYieldStrategy: '0xEcC14061E9c3aa3cc1102d668c1b9e8c3da19392',
+    YieldAggregator: getYieldAggregatorAddress(80002) || '',
+    MockERC20: getMockERC20Address(80002) || '',
+    MockYieldStrategy: getMockYieldStrategyAddress(80002) || '',
   },
   11155111: {
-    YieldAggregator: '0x6624E8D32CA3f4Ae85814496340B64Ac38E1799C', // Updated Sepolia aggregator address
-    MockERC20: '0x8b80b737c954d5fB43B390C083d72E210248ec64',
-    MockYieldStrategy: '0x2B3e7E84e4be132EB85c0180148c62fbDf6a7DCA',
+    YieldAggregator: getYieldAggregatorAddress(11155111) || '',
+    MockERC20: getMockERC20Address(11155111) || '',
+    MockYieldStrategy: getMockYieldStrategyAddress(11155111) || '',
   },
-  // 31337: { ... } // Hardhat removed for demo
 };
 
 export const STATIC_PROVIDERS: Record<number, ethers.JsonRpcProvider> = {

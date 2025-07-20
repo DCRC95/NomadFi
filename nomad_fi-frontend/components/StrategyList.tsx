@@ -6,6 +6,7 @@ import { calculateRiskCategory } from "../src/lib/riskUtils";
 import { hardhat, polygonAmoy, sepolia } from "../pages/_app";
 import { ethers } from "ethers";
 import MockERC20Abi from "../src/abi/MockERC20.json";
+import { getAaveV3AssetAddress, getYieldAggregatorAddress } from "../src/lib/addresses";
 
 const CHAIN_NAMES: Record<number, string> = {
   [hardhat.id]: hardhat.name,
@@ -114,19 +115,21 @@ type YieldStrategy = {
 };
 
 export default function StrategyList({ strategies, filterRiskCategories }: StrategyListProps) {
-  // Only filter if every strategy has the required fields
+  // Check if strategies have the required fields for filtering
   const canFilter = Array.isArray(strategies) && strategies.length > 0 && strategies.every(s =>
-    s && typeof s === 'object' && 'baseRiskScore' in s && 'name' in s && 'strategyAddress' in s
+    s && typeof s === 'object' && 'name' in s && 'strategyAddress' in s
   );
 
   const filteredStrategies = canFilter
     ? (strategies as YieldStrategy[]).filter(strategy => {
         let riskCategory = "Unknown";
         try {
-          // Ensure baseRiskScore is a number for risk calculation
+          // Create a strategy object with baseRiskScore for risk calculation
+          // Use strategyType to determine risk (0 = Mock = Low, 1 = Aave = Medium)
+          const baseRiskScore = strategy.strategyType === 0 ? 2 : 4; // Mock = Low risk, Aave = Medium risk
           const safeStrategy = {
             ...strategy,
-            baseRiskScore: typeof strategy.baseRiskScore === 'string' ? Number(strategy.baseRiskScore) : strategy.baseRiskScore,
+            baseRiskScore: baseRiskScore,
           };
           riskCategory = calculateRiskCategory(safeStrategy);
         } catch {}
@@ -153,8 +156,17 @@ function StrategyCardWithFilter({ strategy, filterRiskCategories }: { strategy: 
   const { address: userAddress } = useAccount();
   const connectedChainId = useChainId();
   const chainIdNum = Number(strategy.chainId);
-  // Always use Sepolia aggregator for all strategies (since it's the only one deployed)
-  const aggregatorAddress = CONTRACT_ADDRESSES[11155111]?.YieldAggregator as `0x${string}`;
+  // Use the aggregator address for the strategy's chain
+  const resolvedAggregatorAddress = getYieldAggregatorAddress(chainIdNum);
+  const fallbackAggregatorAddress = CONTRACT_ADDRESSES[chainIdNum]?.YieldAggregator;
+  const aggregatorAddress = (resolvedAggregatorAddress || fallbackAggregatorAddress) as `0x${string}`;
+  
+  console.log('Address Resolution Debug:', {
+    chainId: chainIdNum,
+    resolvedAggregatorAddress,
+    fallbackAggregatorAddress,
+    finalAggregatorAddress: aggregatorAddress
+  });
   const strategyId = strategy.id;
   const isOnCorrectNetwork = Number(connectedChainId) === chainIdNum;
   
@@ -167,6 +179,8 @@ function StrategyCardWithFilter({ strategy, filterRiskCategories }: { strategy: 
         await switchChain({ chainId: sepolia.id });
       } else if (chainIdNum === 80002) {
         await switchChain({ chainId: polygonAmoy.id });
+      } else if (chainIdNum === 31337) {
+        await switchChain({ chainId: hardhat.id });
       }
     } catch (error) {
       console.error('Failed to switch network:', error);
@@ -204,6 +218,16 @@ function StrategyCardWithFilter({ strategy, filterRiskCategories }: { strategy: 
 
   // Debug logging
   React.useEffect(() => {
+    console.log('StrategyList Debug:', {
+      strategyId: strategy.id,
+      chainId: chainIdNum,
+      connectedChainId: connectedChainId,
+      tokenAddress: underlyingTokenAddress,
+      aggregatorAddress: aggregatorAddress,
+      userAddress,
+      isOnCorrectNetwork: isOnCorrectNetwork
+    });
+    
     if (balanceError) {
       console.error('Balance fetch error:', {
         strategyId: strategy.id,
@@ -213,7 +237,7 @@ function StrategyCardWithFilter({ strategy, filterRiskCategories }: { strategy: 
         error: balanceError
       });
     }
-  }, [balanceError, strategy.id, chainIdNum, underlyingTokenAddress, userAddress]);
+  }, [balanceError, strategy.id, chainIdNum, underlyingTokenAddress, userAddress, connectedChainId, aggregatorAddress, isOnCorrectNetwork]);
 
   // Fetch user's deposited balance in the aggregator for this strategy
   const shouldFetchDeposit = !!userAddress && !!tokenAddress;
@@ -224,9 +248,9 @@ function StrategyCardWithFilter({ strategy, filterRiskCategories }: { strategy: 
           abi: YIELD_AGGREGATOR_ABI,
           functionName: "getUserDeposit",
           args: [Number(strategyId), userAddress, tokenAddress],
-          chainId: 11155111, // Always call aggregator on Sepolia
+          chainId: chainIdNum, // Use strategy's chain ID
         }
-      : { address: aggregatorAddress, abi: YIELD_AGGREGATOR_ABI, functionName: "getUserDeposit", args: [0, "0x0000000000000000000000000000000000000000", "0x0000000000000000000000000000000000000000"], chainId: 11155111 }
+      : { address: aggregatorAddress, abi: YIELD_AGGREGATOR_ABI, functionName: "getUserDeposit", args: [0, "0x0000000000000000000000000000000000000000", "0x0000000000000000000000000000000000000000"], chainId: chainIdNum }
   );
 
   // Debug logging for deposited amount
@@ -297,19 +321,19 @@ function StrategyCardWithFilter({ strategy, filterRiskCategories }: { strategy: 
     abi: YIELD_AGGREGATOR_ABI,
     functionName: "getUserDeposit",
     args: [strategyId, userAddress, tokenAddress],
-    chainId: 11155111, // Always call aggregator on Sepolia
+    chainId: chainIdNum, // Use strategy's chain ID
   });
 
-  // USDC and Aggregator addresses for Sepolia
-  const USDC_TOKEN_ADDRESS = "0x94a9d9ac8a22534e3faca9f4e7f2e2cf85d5e4c8";
-  const YIELD_AGGREGATOR_ADDRESS = "0x6624E8D32CA3f4Ae85814496340B64Ac38E1799C";
+  // Get addresses for the strategy's chain
+  const USDC_TOKEN_ADDRESS = (getAaveV3AssetAddress(chainIdNum, "USDC", "UNDERLYING") || "0x0000000000000000000000000000000000000000") as `0x${string}`;
+  const YIELD_AGGREGATOR_ADDRESS = (getYieldAggregatorAddress(chainIdNum) || aggregatorAddress) as `0x${string}`;
 
   // Determine if this is the Aave/USDC strategy (by name or id)
-  const isAaveStrategy = (strategy.name && strategy.name.toLowerCase().includes("aave")) || strategy.id === 3;
+  const isAaveStrategy = (strategy.name && strategy.name.toLowerCase().includes("aave")) || strategy.id === "2";
   // Determine if this is the LINK strategy (by name)
   const isLinkStrategy = strategy.name && strategy.name.toLowerCase().includes("link");
   // Determine if this is specifically the Aave/USDC strategy (not LINK)
-  const isAaveUsdcStrategy = (strategy.name && strategy.name.toLowerCase().includes("aave") && !strategy.name.toLowerCase().includes("link")) || strategy.id === 3;
+  const isAaveUsdcStrategy = (strategy.name && strategy.name.toLowerCase().includes("aave") && !strategy.name.toLowerCase().includes("link")) || strategy.id === "2";
 
   // Use 18 decimals for LINK, 6 for Aave/USDC, otherwise fallback to tokenDecimals or 18
   const decimals = isLinkStrategy ? 18 : (isAaveUsdcStrategy ? 6 : (typeof tokenDecimals === 'number' ? tokenDecimals : 18));
@@ -368,12 +392,12 @@ function StrategyCardWithFilter({ strategy, filterRiskCategories }: { strategy: 
         await new Promise(resolve => setTimeout(resolve, 1000));
       }
       if (isAaveUsdcStrategy) {
-        // Deposit on Aggregator, USDC, strategyId 3
+        // Deposit on Aggregator, USDC, strategyId 2
         await writeDeposit({
           address: YIELD_AGGREGATOR_ADDRESS,
           abi: YIELD_AGGREGATOR_ABI,
           functionName: "deposit",
-          args: [USDC_TOKEN_ADDRESS, amountBigInt, 3],
+          args: [USDC_TOKEN_ADDRESS, amountBigInt, 2],
         });
       } else {
         // Default logic for other strategies (including LINK Aave)
@@ -412,9 +436,9 @@ function StrategyCardWithFilter({ strategy, filterRiskCategories }: { strategy: 
       return;
     }
     try {
-      // Switch to Sepolia for aggregator transaction
-      if (Number(connectedChainId) !== 11155111) {
-        await switchChain({ chainId: sepolia.id });
+      // Switch to strategy's network for aggregator transaction
+      if (Number(connectedChainId) !== chainIdNum) {
+        await handleSwitchToStrategyNetwork();
         // Wait for network switch to complete
         await new Promise(resolve => setTimeout(resolve, 1000));
       }

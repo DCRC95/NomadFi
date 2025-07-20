@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-interface IYieldAggregator {
-    enum StrategyType { Mock, Aave }
+interface IStrategyManager {
+    enum StrategyType { Mock, Aave, Compound }
 
     struct StrategyInfo {
         address tokenAddress;

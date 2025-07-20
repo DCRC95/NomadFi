@@ -13,20 +13,21 @@ async function main() {
   const mockYieldStrategy = await MockYieldStrategy.deploy(mockERC20.target);
   console.log(`MockYieldStrategy (local) deployed to: ${mockYieldStrategy.target}`);
 
-  // Deploy YieldAggregator
+  // Deploy YieldAggregator with MockERC20 as initial supported token
   const YieldAggregator = await ethers.getContractFactory("YieldAggregator");
-  const yieldAggregator = await YieldAggregator.deploy();
+  const yieldAggregator = await YieldAggregator.deploy([mockERC20.target]);
   console.log(`YieldAggregator deployed to: ${yieldAggregator.target}`);
+  console.log(`MockERC20 added as initial supported token: ${mockERC20.target}`);
 
   // Register the local MockYieldStrategy
   const localChainId = (await ethers.provider.getNetwork()).chainId;
   const tx1 = await yieldAggregator.addStrategy(
-    mockYieldStrategy.target,
-    localChainId,
-    "Local Mock Strategy",
-    "A local mock yield strategy for testing.",
-    100, // baseRiskScore
-    "ipfs://local-mock-strategy-metadata"
+    1, // strategy ID
+    mockERC20.target, // token address
+    mockYieldStrategy.target, // strategy address
+    "Local Mock Strategy", // name
+    localChainId, // chain ID
+    0 // strategy type (0 = Mock)
   );
   const receipt1 = await tx1.wait();
   const event1 = receipt1.logs.find(
@@ -42,12 +43,12 @@ async function main() {
   const sepoliaChainId = 11155111;
   const remoteStrategyAddress = "0x000000000000000000000000000000000000dead";
   const tx2 = await yieldAggregator.addStrategy(
-    remoteStrategyAddress,
-    sepoliaChainId,
-    "Sepolia Simulated Strategy",
-    "A simulated remote strategy on Sepolia.",
-    200, // baseRiskScore
-    "ipfs://sepolia-simulated-strategy-metadata"
+    2, // strategy ID
+    mockERC20.target, // token address (using local token for simulation)
+    remoteStrategyAddress, // strategy address
+    "Sepolia Simulated Strategy", // name
+    sepoliaChainId, // chain ID
+    0 // strategy type (0 = Mock)
   );
   const receipt2 = await tx2.wait();
   const event2 = receipt2.logs.find(

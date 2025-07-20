@@ -7,9 +7,9 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "contracts/interfaces/IAAVEYieldStrategy.sol";
 import "contracts/interfaces/IMockYieldStrategy.sol";
-import "contracts/interfaces/IYieldAggregator.sol";
+import "./interfaces/IStrategyManager.sol";
 
-contract YieldAggregator is Ownable, ReentrancyGuard, IYieldAggregator {
+contract YieldAggregator is Ownable, ReentrancyGuard, IStrategyManager {
     using SafeERC20 for IERC20;
 
     constructor(address[] memory _initialSupportedTokens) Ownable(msg.sender) {
@@ -29,7 +29,7 @@ contract YieldAggregator is Ownable, ReentrancyGuard, IYieldAggregator {
         emit TokenUnSupported(_tokenAddress);
     }
 
-    mapping(uint256 => IYieldAggregator.StrategyInfo) public strategies;
+    mapping(uint256 => IStrategyManager.StrategyInfo) public strategies;
     uint256[] public strategyIds;
     // user => token => strategyId => amount
     mapping(address => mapping(address => mapping(uint256 => uint256))) public userDeposits;
@@ -42,9 +42,9 @@ contract YieldAggregator is Ownable, ReentrancyGuard, IYieldAggregator {
         address _strategyAddress,
         string memory _name,
         uint256 _chainId,
-        IYieldAggregator.StrategyType _strategyType
+        IStrategyManager.StrategyType _strategyType
     ) public onlyOwner {
-        strategies[_id] = IYieldAggregator.StrategyInfo({
+        strategies[_id] = IStrategyManager.StrategyInfo({
             tokenAddress: _tokenAddress,
             strategyAddress: _strategyAddress,
             name: _name,
@@ -62,19 +62,19 @@ contract YieldAggregator is Ownable, ReentrancyGuard, IYieldAggregator {
         emit StrategyRemoved(_strategyId);
     }
 
-    function getStrategyInfo(uint256 _strategyId) external view override returns (IYieldAggregator.StrategyInfo memory) {
+    function getStrategyInfo(uint256 _strategyId) external view override returns (IStrategyManager.StrategyInfo memory) {
         return strategies[_strategyId];
     }
 
     function getStrategyAPY(uint256 _strategyId) public view override returns (uint256) {
-        IYieldAggregator.StrategyInfo storage strategyInfo = strategies[_strategyId];
-        if (strategyInfo.strategyType == IYieldAggregator.StrategyType.Aave) {
+        IStrategyManager.StrategyInfo storage strategyInfo = strategies[_strategyId];
+        if (strategyInfo.strategyType == IStrategyManager.StrategyType.Aave) {
             try IAAVEYieldStrategy(strategyInfo.strategyAddress).apy() returns (uint256 apyValue) {
                 return apyValue;
             } catch {
                 return 0; // Fallback if APY call fails
             }
-        } else if (strategyInfo.strategyType == IYieldAggregator.StrategyType.Mock) {
+        } else if (strategyInfo.strategyType == IStrategyManager.StrategyType.Mock) {
             try IMockYieldStrategy(strategyInfo.strategyAddress).getAPY() returns (uint256 apyValue) {
                 return apyValue;
             } catch {
@@ -94,8 +94,8 @@ contract YieldAggregator is Ownable, ReentrancyGuard, IYieldAggregator {
         userDeposits[msg.sender][_tokenAddress][_strategyId] += _amount;
         emit Deposit(msg.sender, _tokenAddress, _amount, _strategyId, block.timestamp);
 
-        IYieldAggregator.StrategyInfo storage strategyInfo = strategies[_strategyId];
-        if (strategyInfo.strategyType == IYieldAggregator.StrategyType.Aave) {
+        IStrategyManager.StrategyInfo storage strategyInfo = strategies[_strategyId];
+        if (strategyInfo.strategyType == IStrategyManager.StrategyType.Aave) {
             // Forward tokens to the AAVEYieldStrategy contract
             IERC20(_tokenAddress).safeTransfer(strategyInfo.strategyAddress, _amount);
             // Tell the strategy to deposit to Aave
@@ -109,8 +109,8 @@ contract YieldAggregator is Ownable, ReentrancyGuard, IYieldAggregator {
         require(_amount > 0, "Amount must be greater than zero");
         require(userDeposits[msg.sender][_tokenAddress][_strategyId] >= _amount, "YieldAggregator: Insufficient deposited balance");
 
-        IYieldAggregator.StrategyInfo storage strategyInfo = strategies[_strategyId];
-        if (strategyInfo.strategyType == IYieldAggregator.StrategyType.Aave) {
+        IStrategyManager.StrategyInfo storage strategyInfo = strategies[_strategyId];
+        if (strategyInfo.strategyType == IStrategyManager.StrategyType.Aave) {
             // Withdraw from AAVEYieldStrategy to this contract
             IAAVEYieldStrategy(strategyInfo.strategyAddress).withdrawFromProtocol(_amount, address(this));
         }

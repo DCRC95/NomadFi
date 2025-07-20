@@ -1,67 +1,88 @@
 // scripts/test-contract-call.js
 // Test script to verify the userDeposits function call on the new YieldAggregator contract
 
-const { ethers } = require("hardhat");
+const hre = require("hardhat");
+const fs = require("fs");
+const path = require("path");
 
 async function main() {
-  const [deployer] = await ethers.getSigners();
-  console.log(`Testing with account: ${deployer.address}`);
-  console.log(`Network: ${hre.network.name}`);
+  console.log("Testing YieldAggregator contract on Sepolia...");
 
-  // New YieldAggregator address
-  const YIELD_AGGREGATOR_ADDRESS = "0x22954D73CE88998Bc66334A6D28dDA5EfAc9cfDf";
-  const MOCK_ERC20_ADDRESS = "0xd0B01c1ce87508757FEB41C5D8b2D117a4f4c283";
+  // Load addresses.json
+  const addressesPath = path.join(__dirname, "../constants/addresses.json");
+  const addresses = JSON.parse(fs.readFileSync(addressesPath, 'utf8'));
+  const networkConfig = addresses['11155111'];
   
-  // Get the contract
-  const YieldAggregator = await ethers.getContractAt("YieldAggregator", YIELD_AGGREGATOR_ADDRESS);
-  
-  // Test getAllStrategyIds
-  console.log("Testing getAllStrategyIds...");
-  try {
-    const strategyIds = await YieldAggregator.getAllStrategyIds();
-    console.log("Strategy IDs:", strategyIds);
-  } catch (error) {
-    console.error("Error getting strategy IDs:", error.message);
+  const yieldAggregatorAddress = networkConfig.deployedContracts?.YieldAggregator;
+  console.log(`YieldAggregator address: ${yieldAggregatorAddress}`);
+
+  if (!yieldAggregatorAddress) {
+    console.log("❌ No YieldAggregator address found in addresses.json");
+    return;
   }
-  
-  // Test userDeposits for the deployer
-  console.log("Testing userDeposits...");
+
   try {
-    // Test with a sample strategy ID (first one if available)
-    const strategyIds = await YieldAggregator.getAllStrategyIds();
-    if (strategyIds.length > 0) {
-      const firstStrategyId = strategyIds[0];
-      console.log("Testing with strategy ID:", firstStrategyId);
-      
-      const userDeposit = await YieldAggregator.userDeposits(deployer.address, MOCK_ERC20_ADDRESS, firstStrategyId);
-      console.log("User deposit amount:", userDeposit.toString());
-    } else {
-      console.log("No strategies found, testing with empty strategy ID");
-      const userDeposit = await YieldAggregator.userDeposits(deployer.address, MOCK_ERC20_ADDRESS, "0x0000000000000000000000000000000000000000000000000000000000000000");
-      console.log("User deposit amount:", userDeposit.toString());
+    // Get provider
+    const provider = new hre.ethers.JsonRpcProvider(process.env.SEPOLIA_RPC_URL);
+    
+    // Check if contract exists by getting its code
+    const code = await provider.getCode(yieldAggregatorAddress);
+    console.log(`Contract code length: ${code.length}`);
+    
+    if (code === "0x") {
+      console.log("❌ No contract deployed at this address");
+      return;
     }
-  } catch (error) {
-    console.error("Error getting user deposits:", error.message);
-  }
-  
-  // Test getStrategyInfo for first strategy
-  console.log("Testing getStrategyInfo...");
-  try {
-    const strategyIds = await YieldAggregator.getAllStrategyIds();
-    if (strategyIds.length > 0) {
-      const firstStrategyId = strategyIds[0];
-      const strategyInfo = await YieldAggregator.getStrategyInfo(firstStrategyId);
-      console.log("Strategy info:", {
-        strategyAddress: strategyInfo.strategyAddress,
-        chainId: strategyInfo.chainId.toString(),
-        name: strategyInfo.name,
-        description: strategyInfo.description,
-        baseRiskScore: strategyInfo.baseRiskScore.toString(),
-        isActive: strategyInfo.isActive
-      });
+
+    console.log("✅ Contract exists at this address");
+
+    // Try to get contract instance
+    const YieldAggregator = await hre.ethers.getContractFactory("YieldAggregator");
+    const yieldAggregator = YieldAggregator.attach(yieldAggregatorAddress);
+
+    // Test basic functions
+    console.log("\n--- Testing Basic Functions ---");
+    
+    try {
+      const owner = await yieldAggregator.owner();
+      console.log(`✅ Owner: ${owner}`);
+    } catch (error) {
+      console.log(`❌ Owner call failed: ${error.message}`);
     }
+
+    try {
+      const strategyIds = await yieldAggregator.getAllStrategyIds();
+      console.log(`✅ getAllStrategyIds: ${strategyIds.length} strategies found`);
+      console.log(`   Strategy IDs: ${strategyIds.map(id => id.toString())}`);
+    } catch (error) {
+      console.log(`❌ getAllStrategyIds failed: ${error.message}`);
+    }
+
+    try {
+      const strategyCount = await yieldAggregator.strategyIds.length;
+      console.log(`✅ strategyIds.length: ${strategyCount}`);
+    } catch (error) {
+      console.log(`❌ strategyIds.length failed: ${error.message}`);
+    }
+
+    // Test if we can get strategy info for ID 0
+    try {
+      const strategyInfo = await yieldAggregator.getStrategyInfo(0);
+      console.log(`✅ getStrategyInfo(0): ${strategyInfo.name}`);
+    } catch (error) {
+      console.log(`❌ getStrategyInfo(0) failed: ${error.message}`);
+    }
+
+    // Test batch function
+    try {
+      const batchData = await yieldAggregator.getBatchStrategyData([0]);
+      console.log(`✅ getBatchStrategyData([0]): ${batchData.length} items returned`);
+    } catch (error) {
+      console.log(`❌ getBatchStrategyData([0]) failed: ${error.message}`);
+    }
+
   } catch (error) {
-    console.error("Error getting strategy info:", error.message);
+    console.error("❌ Error testing contract:", error.message);
   }
 }
 
