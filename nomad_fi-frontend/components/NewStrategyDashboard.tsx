@@ -453,10 +453,34 @@ export const NewStrategyDashboard: React.FC = () => {
     }
   };
 
-  const getTokenSymbol = (strategyName: string) => {
-    if (strategyName.toLowerCase().includes('link')) return 'LINK';
-    if (strategyName.toLowerCase().includes('weth')) return 'WETH';
-    if (strategyName.toLowerCase().includes('usdc')) return 'USDC';
+  const getTokenSymbol = (strategyName: string, tokenAddress?: string, chainId?: string) => {
+    // First try to get symbol from token address if available
+    if (tokenAddress && chainId) {
+      try {
+        const chainAddresses = addresses[chainId as keyof typeof addresses] as any;
+        if (chainAddresses?.aaveV3?.assets) {
+          for (const [symbol, asset] of Object.entries(chainAddresses.aaveV3.assets)) {
+            const assetData = asset as any;
+            if (assetData.UNDERLYING.toLowerCase() === tokenAddress.toLowerCase()) {
+              return symbol;
+            }
+          }
+        }
+      } catch (error) {
+        console.warn('Error getting token symbol from address, falling back to name parsing:', error);
+      }
+    }
+
+    // Fallback to name parsing
+    const nameLower = strategyName.toLowerCase();
+    if (nameLower.includes('link')) return 'LINK';
+    if (nameLower.includes('weth')) return 'WETH';
+    if (nameLower.includes('usdc')) return 'USDC';
+    if (nameLower.includes('wbtc')) return 'WBTC';
+    if (nameLower.includes('aave')) return 'AAVE';
+    if (nameLower.includes('eurs')) return 'EURS';
+    if (nameLower.includes('dai')) return 'DAI';
+    if (nameLower.includes('usdt')) return 'USDT';
     return 'ETH';
   };
 
@@ -704,7 +728,7 @@ export const NewStrategyDashboard: React.FC = () => {
             
             {filteredStrategies.map((strategy) => {
               const isCurrentChain = chainId === parseInt(strategy.chainId);
-              const tokenSymbol = getTokenSymbol(strategy.name);
+              const tokenSymbol = getTokenSymbol(strategy.name, strategy.tokenAddress, strategy.chainId);
               const riskCategory = getRiskCategory(strategy);
               const riskColor = getRiskColor(riskCategory);
               
