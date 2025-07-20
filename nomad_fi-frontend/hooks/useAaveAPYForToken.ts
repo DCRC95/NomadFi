@@ -54,6 +54,8 @@ export const useAaveAPYForToken = (chainId: string, tokenAddress: string, strate
           aaveAssetAddress = chainAddresses.aaveV3.assets.WETH.UNDERLYING;
         } else if (strategyNameLower.includes('aavev3usdt') || strategyNameLower.includes('usdt')) {
           aaveAssetAddress = chainAddresses.aaveV3.assets.USDT.UNDERLYING;
+        } else if (strategyNameLower.includes('aavev3eurs') || strategyNameLower.includes('eurs')) {
+          aaveAssetAddress = chainAddresses.aaveV3.assets.EURS.UNDERLYING;
         }
       }
       
