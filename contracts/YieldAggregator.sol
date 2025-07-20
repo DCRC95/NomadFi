@@ -125,6 +125,45 @@ contract YieldAggregator is Ownable, ReentrancyGuard, IStrategyManager {
         return userDeposits[_user][_tokenAddress][_strategyId];
     }
 
+    function getTotalDepositsForStrategy(uint256 _strategyId) external view returns (uint256) {
+        StrategyInfo memory strategy = strategies[_strategyId];
+        uint256 totalDeposits = 0;
+        
+        // This would need to iterate through all users who have deposited to this strategy
+        // For now, we'll return the balance of the strategy contract as a proxy
+        if (strategy.strategyType == StrategyType.Aave) {
+            try IAAVEYieldStrategy(strategy.strategyAddress).getCurrentBalance() returns (uint256 balance) {
+                totalDeposits = balance;
+            } catch {
+                totalDeposits = 0;
+            }
+        } else if (strategy.strategyType == StrategyType.Mock) {
+            // For Mock strategies, we can check the token balance of the strategy contract
+            totalDeposits = IERC20(strategy.tokenAddress).balanceOf(strategy.strategyAddress);
+        }
+        
+        return totalDeposits;
+    }
+
+    function getTotalValueLockedForStrategy(uint256 _strategyId) external view returns (uint256) {
+        StrategyInfo memory strategy = strategies[_strategyId];
+        uint256 tvl = 0;
+        
+        if (strategy.strategyType == StrategyType.Aave) {
+            // For Aave strategies, get the total supply from the aToken (real TVL)
+            try IAAVEYieldStrategy(strategy.strategyAddress).getTotalSupply() returns (uint256 totalSupply) {
+                tvl = totalSupply;
+            } catch {
+                tvl = 0;
+            }
+        } else if (strategy.strategyType == StrategyType.Mock) {
+            // For Mock strategies, use the token balance as TVL
+            tvl = IERC20(strategy.tokenAddress).balanceOf(strategy.strategyAddress);
+        }
+        
+        return tvl;
+    }
+
     function getAllStrategyIds() public view returns (uint256[] memory) {
         return strategyIds;
     }
@@ -150,15 +189,10 @@ contract YieldAggregator is Ownable, ReentrancyGuard, IStrategyManager {
         }
         
         // Calculate total deposits for this strategy
-        uint256 totalDeposits = 0;
-        for (uint256 i = 0; i < strategyIds.length; i++) {
-            if (strategyIds[i] == _strategyId) {
-                // Sum all user deposits for this strategy
-                // This is a simplified calculation - in production you might want to track this separately
-                totalDeposits = 0; // Placeholder - would need to iterate through all users
-                break;
-            }
-        }
+        uint256 totalDeposits = this.getTotalDepositsForStrategy(_strategyId);
+        
+        // Calculate total value locked for this strategy
+        uint256 totalValueLocked = this.getTotalValueLockedForStrategy(_strategyId);
         
         return StrategyData({
             tokenAddress: strategy.tokenAddress,
@@ -169,7 +203,7 @@ contract YieldAggregator is Ownable, ReentrancyGuard, IStrategyManager {
             isActive: strategy.isActive,
             apy: strategyApy,
             totalDeposits: totalDeposits,
-            totalValueLocked: totalDeposits // Simplified - in production this would include accrued interest
+            totalValueLocked: totalValueLocked
         });
     }
 

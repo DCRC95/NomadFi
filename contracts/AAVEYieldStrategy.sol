@@ -69,6 +69,11 @@ contract AAVEYieldStrategy is IAAVEYieldStrategy {
         return aToken.balanceOf(address(this));
     }
 
+    function getTotalSupply() external view returns (uint256) {
+        // Returns the total supply of aTokens, which represents the total TVL for this asset on Aave
+        return aToken.totalSupply();
+    }
+
     function apy() external view override returns (uint256) {
         // Get reserve data from Aave Lending Pool
         // Note: Aave's getReserveData returns a ReserveData struct.

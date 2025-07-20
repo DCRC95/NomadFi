@@ -23,6 +23,8 @@ export const useAaveAPYForToken = (chainId: string, tokenAddress: string, strate
     try {
       setLoading(true);
       setError(null);
+      
+      console.log(`[useAaveAPYForToken] Starting fetch for ${strategyName} (${tokenAddress})`);
 
       const chainAddresses = addresses[chainId as keyof typeof addresses] as any;
       if (!chainAddresses?.aaveV3?.core) {
@@ -39,23 +41,35 @@ export const useAaveAPYForToken = (chainId: string, tokenAddress: string, strate
       if (chainAddresses.aaveV3?.assets && strategyName) {
         const strategyNameLower = strategyName.toLowerCase();
         
+        console.log(`[useAaveAPYForToken] Strategy name: ${strategyName}, lowercase: ${strategyNameLower}`);
+        
         // Map strategy names to their correct Aave asset addresses
         if (strategyNameLower.includes('aavev3link') || strategyNameLower.includes('link')) {
           aaveAssetAddress = chainAddresses.aaveV3.assets.LINK.UNDERLYING;
+          console.log(`[useAaveAPYForToken] Mapped to LINK: ${aaveAssetAddress}`);
         } else if (strategyNameLower.includes('aavev3wbtc') || strategyNameLower.includes('wbtc')) {
           aaveAssetAddress = chainAddresses.aaveV3.assets.WBTC.UNDERLYING;
-        } else if (strategyNameLower.includes('aavev3aave') || strategyNameLower.includes('aave')) {
-          aaveAssetAddress = chainAddresses.aaveV3.assets.AAVE.UNDERLYING;
-        } else if (strategyNameLower.includes('aavev3usdc') || strategyNameLower.includes('usdc')) {
-          aaveAssetAddress = chainAddresses.aaveV3.assets.USDC.UNDERLYING;
-        } else if (strategyNameLower.includes('aavev3dai') || strategyNameLower.includes('dai')) {
-          aaveAssetAddress = chainAddresses.aaveV3.assets.DAI.UNDERLYING;
-        } else if (strategyNameLower.includes('aavev3weth') || strategyNameLower.includes('weth')) {
-          aaveAssetAddress = chainAddresses.aaveV3.assets.WETH.UNDERLYING;
-        } else if (strategyNameLower.includes('aavev3usdt') || strategyNameLower.includes('usdt')) {
-          aaveAssetAddress = chainAddresses.aaveV3.assets.USDT.UNDERLYING;
+          console.log(`[useAaveAPYForToken] Mapped to WBTC: ${aaveAssetAddress}`);
         } else if (strategyNameLower.includes('aavev3eurs') || strategyNameLower.includes('eurs')) {
           aaveAssetAddress = chainAddresses.aaveV3.assets.EURS.UNDERLYING;
+          console.log(`[useAaveAPYForToken] Mapped to EURS: ${aaveAssetAddress}`);
+        } else if (strategyNameLower.includes('aavev3aave') || strategyNameLower.includes('aave')) {
+          aaveAssetAddress = chainAddresses.aaveV3.assets.AAVE.UNDERLYING;
+          console.log(`[useAaveAPYForToken] Mapped to AAVE: ${aaveAssetAddress}`);
+        } else if (strategyNameLower.includes('aavev3usdc') || strategyNameLower.includes('usdc')) {
+          aaveAssetAddress = chainAddresses.aaveV3.assets.USDC.UNDERLYING;
+          console.log(`[useAaveAPYForToken] Mapped to USDC: ${aaveAssetAddress}`);
+        } else if (strategyNameLower.includes('aavev3dai') || strategyNameLower.includes('dai')) {
+          aaveAssetAddress = chainAddresses.aaveV3.assets.DAI.UNDERLYING;
+          console.log(`[useAaveAPYForToken] Mapped to DAI: ${aaveAssetAddress}`);
+        } else if (strategyNameLower.includes('aavev3weth') || strategyNameLower.includes('weth')) {
+          aaveAssetAddress = chainAddresses.aaveV3.assets.WETH.UNDERLYING;
+          console.log(`[useAaveAPYForToken] Mapped to WETH: ${aaveAssetAddress}`);
+        } else if (strategyNameLower.includes('aavev3usdt') || strategyNameLower.includes('usdt')) {
+          aaveAssetAddress = chainAddresses.aaveV3.assets.USDT.UNDERLYING;
+          console.log(`[useAaveAPYForToken] Mapped to USDT: ${aaveAssetAddress}`);
+        } else {
+          console.log(`[useAaveAPYForToken] No mapping found, using original: ${aaveAssetAddress}`);
         }
       }
       
@@ -63,11 +77,12 @@ export const useAaveAPYForToken = (chainId: string, tokenAddress: string, strate
 
       // Create provider
       const rpcUrl = chainId === '11155111' 
-        ? 'https://ethereum-sepolia.publicnode.com'
+        ? process.env.NEXT_PUBLIC_SEPOLIA_RPC_URL || 'https://ethereum-sepolia.publicnode.com'
         : chainId === '1' 
         ? 'https://ethereum.publicnode.com'
         : 'https://polygon.publicnode.com';
       
+      console.log(`[useAaveAPYForToken] Using RPC URL: ${rpcUrl}`);
       const provider = new ethers.JsonRpcProvider(rpcUrl);
       const poolDataProvider = new ethers.Contract(UI_POOL_DATA_PROVIDER, UI_POOL_DATA_PROVIDER_ABI, provider);
 
@@ -92,9 +107,10 @@ export const useAaveAPYForToken = (chainId: string, tokenAddress: string, strate
       const SECONDS_PER_YEAR = 365 * 24 * 60 * 60;
       const supplyAPY = (Math.pow(1 + supplyAPR / SECONDS_PER_YEAR, SECONDS_PER_YEAR) - 1) * 100;
 
+      console.log(`[useAaveAPYForToken] Calculated APY: ${supplyAPY.toFixed(4)}%`);
       setApy(supplyAPY);
     } catch (err) {
-      console.error('Error fetching Aave APY for token:', err);
+      console.error('[useAaveAPYForToken] Error fetching Aave APY for token:', err);
       setError(err instanceof Error ? err.message : 'Failed to fetch APY data');
       setApy(null);
     } finally {

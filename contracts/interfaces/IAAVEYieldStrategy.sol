@@ -6,4 +6,5 @@ interface IAAVEYieldStrategy {
     function withdrawFromProtocol(uint256 amount, address to) external returns (bool success);
     function apy() external view returns (uint256);
     function getCurrentBalance() external view returns (uint256);
+    function getTotalSupply() external view returns (uint256);
 } 

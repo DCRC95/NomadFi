@@ -17,6 +17,8 @@ export const AaveAPYBadge: React.FC<AaveAPYBadgeProps> = ({
   className = '' 
 }) => {
   const { apy, loading, error } = useAaveAPYForToken(chainId, tokenAddress, strategyName);
+  
+  console.log(`[AaveAPYBadge] ${strategyName}: loading=${loading}, error=${error}, apy=${apy}, fallbackAPY=${fallbackAPY}`);
 
   if (loading) {
     return (

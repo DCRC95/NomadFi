@@ -149,6 +149,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
               console.error(`[strategies API] Error getting APY for strategy ${strategyId}:`, apyErr);
             }
             
+
+            
             // Get user data if wallet address is provided
             let userData = null;
             if (walletAddress && typeof walletAddress === 'string') {

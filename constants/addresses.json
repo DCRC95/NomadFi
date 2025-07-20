@@ -143,13 +143,15 @@
       "WETH_DECIMALS": 18
     },
     "deployedContracts": {
-      "YieldAggregator": "0x4DA94EAC2b1C2960Dcdcc21aEed5239bC1EAFc47",
+      "YieldAggregator": "0xcb7718eb8e307394595ec6138A988de12B4bC0Ff",
       "MockERC20": "0x8b80b737c954d5fB43B390C083d72E210248ec64",
       "MockYieldStrategy": "0x2B3e7E84e4be132EB85c0180148c62fbDf6a7DCA",
       "AaveV3LINKStrategy": "0x3C96145eb50db60F177079e8416c634EcA5141f6",
       "CompoundWETHStrategy": "0x217735950B08366e6BD2e1E67E6874ccf3ca9B80",
       "AaveV3WBTCStrategy": "0x4d4985590B82aB168FD61E6C8A21d920f30db1ad",
-      "AaveV3AAVEStrategy": "0x6cF0703056c1043e1fBe7162FbBfca5B03a917AF"
-    }
+      "AaveV3AAVEStrategy": "0x6cF0703056c1043e1fBe7162FbBfca5B03a917AF",
+      "AaveV3EURSStrategy": "0x47DAC3Cd945790404d95c39F6c278e69f5409641"
+    },
+    "yieldAggregator": "0xcb7718eb8e307394595ec6138A988de12B4bC0Ff"
   }
 }

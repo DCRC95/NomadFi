@@ -22,6 +22,14 @@ interface Strategy {
   totalDeposits: string;
 }
 
+interface ApprovalStatus {
+  [strategyId: string]: {
+    needsApproval: boolean;
+    allowance: string;
+    approvedAmount: string;
+  };
+}
+
 export const NewStrategyDashboard: React.FC = () => {
   const [strategies, setStrategies] = useState<Strategy[]>([]);
   const [loading, setLoading] = useState(true);
@@ -31,6 +39,7 @@ export const NewStrategyDashboard: React.FC = () => {
   const [amount, setAmount] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [userBalances, setUserBalances] = useState<{[key: string]: string}>({});
+  const [approvalStatus, setApprovalStatus] = useState<ApprovalStatus>({});
   const [filterRiskCategories, setFilterRiskCategories] = useState<string[]>(['Very Low', 'Low', 'Medium', 'High', 'Very High']);
   const { address: walletAddress, isConnected } = useAccount();
   const chainId = useChainId();
@@ -262,10 +271,58 @@ export const NewStrategyDashboard: React.FC = () => {
     }
   };
 
+  const fetchApprovalStatus = async () => {
+    if (!walletAddress || !walletClient) return;
+
+    console.log('Fetching approval status...');
+    const approvals: ApprovalStatus = {};
+
+    try {
+      for (const strategy of strategies) {
+        try {
+          const chainConfig = CHAIN_CONFIGS.find(c => c.id === strategy.chainId);
+          if (!chainConfig) continue;
+
+          const provider = new ethers.JsonRpcProvider(chainConfig.rpcUrl);
+          const tokenContract = new ethers.Contract(
+            strategy.tokenAddress,
+            MockERC20ABI.abi,
+            provider
+          );
+
+          // Check allowance for the YieldAggregator contract (not the strategy)
+          const allowance = await tokenContract.allowance(walletAddress, chainConfig.aggregatorAddress);
+          const decimals = getTokenDecimals(strategy.tokenAddress, strategy.chainId);
+          const formattedAllowance = formatAmountWithDecimals(allowance, decimals);
+          
+          approvals[strategy.id] = {
+            needsApproval: false, // Will be set based on amount
+            allowance: formattedAllowance,
+            approvedAmount: formattedAllowance
+          };
+          
+          console.log(`Approval status for ${strategy.name}: ${formattedAllowance} (to YieldAggregator: ${chainConfig.aggregatorAddress})`);
+        } catch (err) {
+          console.warn(`Failed to get approval status for ${strategy.name}:`, err);
+          approvals[strategy.id] = {
+            needsApproval: true,
+            allowance: '0.0000',
+            approvedAmount: '0.0000'
+          };
+        }
+      }
+
+      setApprovalStatus(approvals);
+    } catch (err) {
+      console.error('Error fetching approval status:', err);
+    }
+  };
+
   // Fetch balances when strategies or wallet changes
   useEffect(() => {
     if (strategies.length > 0 && walletAddress) {
       fetchUserBalances();
+      fetchApprovalStatus();
     }
   }, [strategies, walletAddress]);
 
@@ -293,6 +350,20 @@ export const NewStrategyDashboard: React.FC = () => {
     // Only allow numbers and decimals
     if (value === '' || /^\d*\.?\d*$/.test(value)) {
       setAmount(value);
+      
+      // Update approval status when amount changes
+      if (activeAction && activeAction.action === 'deposit' && approvalStatus[activeAction.strategyId]) {
+        const currentAllowance = parseFloat(approvalStatus[activeAction.strategyId].allowance);
+        const newAmount = parseFloat(value || '0');
+        
+        setApprovalStatus(prev => ({
+          ...prev,
+          [activeAction.strategyId]: {
+            ...prev[activeAction.strategyId],
+            needsApproval: currentAllowance < newAmount
+          }
+        }));
+      }
     }
   };
 
@@ -305,6 +376,60 @@ export const NewStrategyDashboard: React.FC = () => {
     const balance = userBalances[strategy.id];
     if (balance && parseFloat(balance) > 0) {
       setAmount(balance);
+    }
+  };
+
+  const handleApprove = async (strategyId: string, amount: string) => {
+    if (!amount || parseFloat(amount) <= 0) {
+      alert('Please enter a valid amount to approve');
+      return;
+    }
+
+    setIsProcessing(true);
+    try {
+      const strategy = strategies.find(s => s.id === strategyId);
+      if (!strategy) {
+        throw new Error('Strategy not found');
+      }
+
+      const chainConfig = CHAIN_CONFIGS.find(c => c.id === strategy.chainId);
+      if (!chainConfig) {
+        throw new Error('Chain configuration not found');
+      }
+
+      if (!walletClient) {
+        throw new Error('Wallet not connected');
+      }
+
+      const provider = new ethers.BrowserProvider(walletClient);
+      const signer = await provider.getSigner();
+
+      const amountWei = parseAmountWithDecimals(amount, getTokenDecimals(strategy.tokenAddress, strategy.chainId));
+
+      console.log(`Approving ${amount} ${getTokenSymbol(strategy.name, strategy.tokenAddress, strategy.chainId)} for YieldAggregator (${chainConfig.aggregatorAddress})...`);
+      
+      const tokenContract = new ethers.Contract(
+        strategy.tokenAddress,
+        MockERC20ABI.abi,
+        signer
+      );
+
+      const approveTx = await tokenContract.approve(chainConfig.aggregatorAddress, amountWei);
+      console.log('Approval transaction hash:', approveTx.hash);
+      
+      const approveReceipt = await approveTx.wait();
+      console.log('Approval confirmed in block:', approveReceipt.blockNumber);
+      
+      alert('Token approval confirmed! You can now proceed with the deposit.');
+      
+      // Refresh approval status
+      await fetchApprovalStatus();
+      
+    } catch (error) {
+      console.error('Error during approval:', error);
+      alert(`Error during approval: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    } finally {
+      setIsProcessing(false);
     }
   };
 
@@ -325,48 +450,31 @@ export const NewStrategyDashboard: React.FC = () => {
         throw new Error('Chain configuration not found');
       }
 
-      // Get the signer from wagmi
       if (!walletClient) {
         throw new Error('Wallet not connected');
       }
 
-      // Create provider and signer
       const provider = new ethers.BrowserProvider(walletClient);
       const signer = await provider.getSigner();
 
-      // Convert amount to wei (assuming 18 decimals)
       const amountWei = parseAmountWithDecimals(amount, getTokenDecimals(strategy.tokenAddress, strategy.chainId));
 
       if (activeAction.action === 'deposit') {
-        // Step 1: Approve the YieldAggregator to spend tokens
-        console.log(`Approving ${amount} tokens for YieldAggregator...`);
-        
+        // Check if approval is needed
         const tokenContract = new ethers.Contract(
           strategy.tokenAddress,
           MockERC20ABI.abi,
           signer
         );
-
-        // Check current allowance
+        
         const currentAllowance = await tokenContract.allowance(walletAddress, chainConfig.aggregatorAddress);
-        console.log('Current allowance:', ethers.formatEther(currentAllowance));
-
         if (currentAllowance < amountWei) {
-          // Need to approve
-          const approveTx = await tokenContract.approve(chainConfig.aggregatorAddress, amountWei);
-          console.log('Approval transaction hash:', approveTx.hash);
-          
-          // Wait for approval confirmation
-          const approveReceipt = await approveTx.wait();
-          console.log('Approval confirmed in block:', approveReceipt.blockNumber);
-          
-          alert('Token approval confirmed! You can now proceed with the deposit.');
-        } else {
-          console.log('Sufficient allowance already exists');
+          alert('Please approve tokens first before depositing');
+          return;
         }
 
-        // Step 2: Deposit to the strategy
-        console.log(`Depositing ${amount} tokens to strategy...`);
+        console.log(`Depositing ${amount} ${getTokenSymbol(strategy.name, strategy.tokenAddress, strategy.chainId)} to YieldAggregator...`);
+        console.log(`Contract call params: tokenAddress=${strategy.tokenAddress}, amountWei=${amountWei}, strategyId=${parseInt(strategy.id)}`);
         
         const aggregatorContract = new ethers.Contract(
           chainConfig.aggregatorAddress,
@@ -374,7 +482,8 @@ export const NewStrategyDashboard: React.FC = () => {
           signer
         );
 
-        const depositTx = await aggregatorContract.deposit(strategy.id, amountWei);
+        // Call YieldAggregator.deposit(tokenAddress, amount, strategyId)
+        const depositTx = await aggregatorContract.deposit(strategy.tokenAddress, amountWei, parseInt(strategy.id));
         console.log('Deposit transaction hash:', depositTx.hash);
         
         const depositReceipt = await depositTx.wait();
@@ -383,16 +492,17 @@ export const NewStrategyDashboard: React.FC = () => {
         alert('Deposit completed successfully!');
         
       } else if (activeAction.action === 'withdraw') {
-        // For withdraw, we call the strategy directly
-        console.log(`Withdrawing ${amount} tokens from strategy...`);
+        console.log(`Withdrawing ${amount} ${getTokenSymbol(strategy.name, strategy.tokenAddress, strategy.chainId)} from YieldAggregator...`);
+        console.log(`Contract call params: tokenAddress=${strategy.tokenAddress}, amountWei=${amountWei}, strategyId=${parseInt(strategy.id)}`);
         
-        const strategyContract = new ethers.Contract(
-          strategy.strategyAddress,
-          YieldAggregatorABI.abi, // Using same ABI for now, adjust if needed
+        const aggregatorContract = new ethers.Contract(
+          chainConfig.aggregatorAddress,
+          YieldAggregatorABI.abi,
           signer
         );
 
-        const withdrawTx = await strategyContract.withdraw(amountWei);
+        // Call YieldAggregator.withdraw(tokenAddress, amount, strategyId)
+        const withdrawTx = await aggregatorContract.withdraw(strategy.tokenAddress, amountWei, parseInt(strategy.id));
         console.log('Withdraw transaction hash:', withdrawTx.hash);
         
         const withdrawReceipt = await withdrawTx.wait();
@@ -401,10 +511,7 @@ export const NewStrategyDashboard: React.FC = () => {
         alert('Withdrawal completed successfully!');
       }
 
-      // Reset form
       handleCancelAction();
-      
-      // TODO: Refresh strategy data to show updated balances
       
     } catch (error) {
       console.error(`Error during ${activeAction.action}:`, error);
@@ -830,6 +937,25 @@ export const NewStrategyDashboard: React.FC = () => {
                         <>
                           {activeAction && activeAction.strategyId === strategy.id ? (
                             <div className="flex-1 space-y-3">
+                              {/* Approval Status Display */}
+                              {activeAction.action === 'deposit' && approvalStatus[strategy.id] && (
+                                <div className="text-xs text-gray-600 bg-gray-50 p-2 rounded">
+                                  <div className="flex justify-between items-center">
+                                    <div>Current Allowance: {approvalStatus[strategy.id].allowance} {tokenSymbol}</div>
+                                    <button
+                                      onClick={() => fetchApprovalStatus()}
+                                      disabled={isProcessing}
+                                      className="text-blue-600 hover:text-blue-800 text-xs underline"
+                                    >
+                                      Refresh
+                                    </button>
+                                  </div>
+                                  {parseFloat(approvalStatus[strategy.id].allowance) < parseFloat(amount || '0') && (
+                                    <div className="text-orange-600 font-medium">Approval needed for {amount} {tokenSymbol}</div>
+                                  )}
+                                </div>
+                              )}
+                              
                               <div className="flex items-center space-x-2">
                                 <input
                                   type="text"
@@ -850,27 +976,53 @@ export const NewStrategyDashboard: React.FC = () => {
                                   {tokenSymbol}
                                 </span>
                               </div>
+                              
                               <div className="flex space-x-2">
-                                <button
-                                  onClick={handleSubmitAction}
-                                  disabled={!amount || parseFloat(amount) <= 0 || isProcessing}
-                                  className={`flex-1 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                                    !amount || parseFloat(amount) <= 0 || isProcessing
-                                      ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                                      : activeAction.action === 'deposit'
-                                      ? 'bg-blue-600 text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500'
-                                      : 'bg-orange-600 text-white hover:bg-orange-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500'
-                                  }`}
-                                >
-                                  {isProcessing ? (
-                                    <div className="flex items-center justify-center">
-                                      <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white mr-1"></div>
-                                      Processing...
-                                    </div>
-                                  ) : (
-                                    activeAction.action.charAt(0).toUpperCase() + activeAction.action.slice(1)
-                                  )}
-                                </button>
+                                {activeAction.action === 'deposit' && 
+                                 approvalStatus[strategy.id] && 
+                                 parseFloat(approvalStatus[strategy.id].allowance) < parseFloat(amount || '0') ? (
+                                  // Show approval button first
+                                  <button
+                                    onClick={() => handleApprove(strategy.id, amount)}
+                                    disabled={!amount || parseFloat(amount) <= 0 || isProcessing}
+                                    className={`flex-1 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                                      !amount || parseFloat(amount) <= 0 || isProcessing
+                                        ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                                        : 'bg-orange-600 text-white hover:bg-orange-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500'
+                                    }`}
+                                  >
+                                    {isProcessing ? (
+                                      <div className="flex items-center justify-center">
+                                        <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white mr-1"></div>
+                                        Approving...
+                                      </div>
+                                    ) : (
+                                      'Approve'
+                                    )}
+                                  </button>
+                                ) : (
+                                  // Show deposit/withdraw button
+                                  <button
+                                    onClick={handleSubmitAction}
+                                    disabled={!amount || parseFloat(amount) <= 0 || isProcessing}
+                                    className={`flex-1 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                                      !amount || parseFloat(amount) <= 0 || isProcessing
+                                        ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                                        : activeAction.action === 'deposit'
+                                        ? 'bg-blue-600 text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500'
+                                        : 'bg-orange-600 text-white hover:bg-orange-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500'
+                                    }`}
+                                  >
+                                    {isProcessing ? (
+                                      <div className="flex items-center justify-center">
+                                        <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white mr-1"></div>
+                                        Processing...
+                                      </div>
+                                    ) : (
+                                      activeAction.action.charAt(0).toUpperCase() + activeAction.action.slice(1)
+                                    )}
+                                  </button>
+                                )}
                                 <button
                                   onClick={handleCancelAction}
                                   disabled={isProcessing}
