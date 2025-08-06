@@ -1,0 +1,393 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* 80s Retro-Futuristic Global Styles */
+@layer base {
+  html {
+    background: #000000;
+    color: #f0f0f0;
+    font-family: 'Courier New', monospace;
+  }
+  
+  body {
+    background: #000000;
+    color: #f0f0f0;
+    font-family: 'Courier New', monospace;
+    overflow-x: hidden;
+  }
+  
+  /* CRT Scanline Effect */
+  body::before {
+    content: "";
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(
+      transparent 50%, 
+      rgba(240, 240, 240, 0.02) 50%
+    );
+    background-size: 100% 4px;
+    pointer-events: none;
+    z-index: 9999;
+    animation: scanline 2s linear infinite;
+  }
+  
+  /* CRT Curvature Effect */
+  body::after {
+    content: "";
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: radial-gradient(
+      ellipse at center,
+      transparent 0%,
+      rgba(0, 0, 0, 0.1) 70%,
+      rgba(0, 0, 0, 0.3) 100%
+    );
+    pointer-events: none;
+    z-index: 9998;
+  }
+}
+
+@layer components {
+  /* Retro Card Component */
+  .retro-card {
+    @apply bg-retro-card border border-retro-border rounded-none shadow-retro;
+    background: linear-gradient(145deg, #1a1a1a 0%, #0a0a0a 100%);
+    position: relative;
+  }
+  
+  .retro-card::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(45deg, transparent 30%, rgba(240, 240, 240, 0.1) 50%, transparent 70%);
+    pointer-events: none;
+  }
+  
+  /* Retro Button Component */
+  .retro-button {
+    @apply bg-retro-dark border border-retro-border text-retro-text font-retro px-4 py-2;
+    @apply hover:bg-retro-hover hover:shadow-retro transition-all duration-200;
+    @apply focus:outline-none focus:ring-2 focus:ring-retro-border focus:ring-offset-2 focus:ring-offset-retro-dark;
+    position: relative;
+    overflow: hidden;
+  }
+  
+  .retro-button::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(240, 240, 240, 0.2), transparent);
+    transition: left 0.5s;
+  }
+  
+  .retro-button:hover::before {
+    left: 100%;
+  }
+  
+  /* Retro Input Component */
+  .retro-input {
+    @apply bg-retro-dark border border-retro-border text-retro-text font-retro px-3 py-2;
+    @apply focus:outline-none focus:ring-2 focus:ring-retro-border focus:ring-offset-2 focus:ring-offset-retro-dark;
+    @apply placeholder-retro-text-dim;
+    background: linear-gradient(145deg, #0a0a0a 0%, #1a1a1a 100%);
+  }
+  
+  /* Retro Text Component */
+  .retro-text {
+    @apply text-retro-text font-retro;
+  }
+  
+  .retro-text-dim {
+    @apply text-retro-text-dim font-retro;
+  }
+  
+  /* Terminal Cursor Effect */
+  .terminal-cursor::after {
+    content: "█";
+    animation: flicker 1s infinite;
+  }
+  
+  /* Retro Loading Spinner */
+  .retro-spinner {
+    @apply border-2 border-retro-border border-t-transparent rounded-full;
+    animation: spin 1s linear infinite;
+  }
+  
+  /* Scanline Animation */
+  @keyframes scanline {
+    0% { transform: translateY(-100%); }
+    100% { transform: translateY(100vh); }
+  }
+  
+  /* Flicker Animation */
+  @keyframes flicker {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.8; }
+  }
+  
+  /* Typewriter Animation */
+  @keyframes typewriter {
+    0% { width: 0; }
+    100% { width: 100%; }
+  }
+}
+
+/* Custom scrollbar for retro feel */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #0a0a0a;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #f0f0f0;
+  border-radius: 0;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #e0e0e0;
+}
+
+/* Selection color */
+::selection {
+  background: #f0f0f0;
+  color: #000000;
+}
+
+::-moz-selection {
+  background: #f0f0f0;
+  color: #000000;
+}
+
+/* RainbowKit Wallet Button Enhancements */
+[data-rk] button[data-testid="rk-connect-button"] {
+  font-family: 'Courier New', monospace !important;
+  text-transform: uppercase !important;
+  letter-spacing: 1px !important;
+  border: 2px solid #f0f0f0 !important;
+  background: linear-gradient(145deg, #000000 0%, #0a0a0a 100%) !important;
+  box-shadow: 0 0 5px rgba(240, 240, 240, 0.3) !important;
+  transition: all 0.3s ease !important;
+}
+
+[data-rk] button[data-testid="rk-connect-button"]:hover {
+  box-shadow: 0 0 10px rgba(240, 240, 240, 0.5) !important;
+}
+
+[data-rk] button[data-testid="rk-connect-button"]::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(240, 240, 240, 0.2), transparent);
+  transition: left 0.5s;
+}
+
+[data-rk] button[data-testid="rk-connect-button"]:hover::before {
+  left: 100%;
+}
+
+/* RainbowKit Modal Enhancements */
+[data-rk] [data-testid="rk-connect-modal"] {
+  border: 2px solid #f0f0f0 !important;
+  background: linear-gradient(145deg, #0a0a0a 0%, #000000 100%) !important;
+}
+
+[data-rk] [data-testid="rk-connect-modal"] h1,
+[data-rk] [data-testid="rk-connect-modal"] h2,
+[data-rk] [data-testid="rk-connect-modal"] h3 {
+  font-family: 'Courier New', monospace !important;
+  text-transform: uppercase !important;
+  letter-spacing: 1px !important;
+}
+
+/* RainbowKit Wallet Options */
+[data-rk] [data-testid="rk-wallet-option"] {
+  border: 1px solid rgba(240, 240, 240, 0.3) !important;
+  background: linear-gradient(145deg, #1a1a1a 0%, #0a0a0a 100%) !important;
+  transition: all 0.3s ease !important;
+}
+
+[data-rk] [data-testid="rk-wallet-option"]:hover {
+  border-color: #f0f0f0 !important;
+  box-shadow: 0 0 5px rgba(240, 240, 240, 0.3) !important;
+}
+
+[data-rk] [data-testid="rk-wallet-option"] span {
+  font-family: 'Courier New', monospace !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.5px !important;
+}
+
+/* COMPREHENSIVE ICON HIDING - Hide ALL possible icons in RainbowKit */
+[data-rk] img,
+[data-rk] svg,
+[data-rk] picture,
+[data-rk] [role="img"],
+[data-rk] [aria-label*="wallet"],
+[data-rk] [aria-label*="Wallet"],
+[data-rk] [aria-label*="logo"],
+[data-rk] [aria-label*="Logo"],
+[data-rk] [data-testid*="wallet"] img,
+[data-rk] [data-testid*="Wallet"] img,
+[data-rk] [data-testid*="wallet"] svg,
+[data-rk] [data-testid*="Wallet"] svg,
+[data-rk] [data-testid*="logo"] img,
+[data-rk] [data-testid*="Logo"] img,
+[data-rk] [data-testid*="logo"] svg,
+[data-rk] [data-testid*="Logo"] svg,
+[data-rk] [role="button"] img,
+[data-rk] [role="button"] svg,
+[data-rk] [role="button"] picture,
+[data-rk] button img,
+[data-rk] button svg,
+[data-rk] button picture,
+[data-rk] div[data-testid*="wallet"] img,
+[data-rk] div[data-testid*="Wallet"] img,
+[data-rk] div[data-testid*="wallet"] svg,
+[data-rk] div[data-testid*="Wallet"] svg,
+[data-rk] div[data-testid*="logo"] img,
+[data-rk] div[data-testid*="Logo"] img,
+[data-rk] div[data-testid*="logo"] svg,
+[data-rk] div[data-testid*="Logo"] svg,
+[data-rk] [data-testid="rk-wallet-option"] img,
+[data-rk] [data-testid="rk-wallet-option"] svg,
+[data-rk] [data-testid="rk-wallet-option"] picture,
+[data-rk] [data-testid="rk-wallet-option"] [role="img"],
+[data-rk] [data-testid="rk-wallet-option"] [aria-label*="wallet"],
+[data-rk] [data-testid="rk-wallet-option"] [aria-label*="Wallet"],
+[data-rk] [data-testid="rk-wallet-option"] [aria-label*="logo"],
+[data-rk] [data-testid="rk-wallet-option"] [aria-label*="Logo"],
+[data-rk] [data-testid="rk-wallet-option"] * img,
+[data-rk] [data-testid="rk-wallet-option"] * svg,
+[data-rk] [data-testid="rk-wallet-option"] * picture,
+[data-rk] [data-testid="rk-wallet-option"] * [role="img"],
+[data-rk] [data-testid="rk-wallet-option"] * [aria-label*="wallet"],
+[data-rk] [data-testid="rk-wallet-option"] * [aria-label*="Wallet"],
+[data-rk] [data-testid="rk-wallet-option"] * [aria-label*="logo"],
+[data-rk] [data-testid="rk-wallet-option"] * [aria-label*="Logo"],
+[data-rk] [data-testid="rk-connect-modal"] img,
+[data-rk] [data-testid="rk-connect-modal"] svg,
+[data-rk] [data-testid="rk-connect-modal"] picture,
+[data-rk] [data-testid="rk-connect-modal"] [role="img"],
+[data-rk] [data-testid="rk-connect-modal"] [aria-label*="wallet"],
+[data-rk] [data-testid="rk-connect-modal"] [aria-label*="Wallet"],
+[data-rk] [data-testid="rk-connect-modal"] [aria-label*="logo"],
+[data-rk] [data-testid="rk-connect-modal"] [aria-label*="Logo"],
+[data-rk] [data-testid="rk-connect-modal"] * img,
+[data-rk] [data-testid="rk-connect-modal"] * svg,
+[data-rk] [data-testid="rk-connect-modal"] * picture,
+[data-rk] [data-testid="rk-connect-modal"] * [role="img"],
+[data-rk] [data-testid="rk-connect-modal"] * [aria-label*="wallet"],
+[data-rk] [data-testid="rk-connect-modal"] * [aria-label*="Wallet"],
+[data-rk] [data-testid="rk-connect-modal"] * [aria-label*="logo"],
+[data-rk] [data-testid="rk-connect-modal"] * [aria-label*="Logo"],
+[data-rk] [data-testid="rk-connect-button"] img,
+[data-rk] [data-testid="rk-connect-button"] svg,
+[data-rk] [data-testid="rk-connect-button"] picture,
+[data-rk] [data-testid="rk-connect-button"] [role="img"],
+[data-rk] [data-testid="rk-connect-button"] [aria-label*="wallet"],
+[data-rk] [data-testid="rk-connect-button"] [aria-label*="Wallet"],
+[data-rk] [data-testid="rk-connect-button"] [aria-label*="logo"],
+[data-rk] [data-testid="rk-connect-button"] [aria-label*="Logo"],
+[data-rk] [data-testid="rk-connect-button"] * img,
+[data-rk] [data-testid="rk-connect-button"] * svg,
+[data-rk] [data-testid="rk-connect-button"] * picture,
+[data-rk] [data-testid="rk-connect-button"] * [role="img"],
+[data-rk] [data-testid="rk-connect-button"] * [aria-label*="wallet"],
+[data-rk] [data-testid="rk-connect-button"] * [aria-label*="Wallet"],
+[data-rk] [data-testid="rk-connect-button"] * [aria-label*="logo"],
+[data-rk] [data-testid="rk-connect-button"] * [aria-label*="Logo"],
+[data-rk] [data-testid="rk-account-button"] img,
+[data-rk] [data-testid="rk-account-button"] svg,
+[data-rk] [data-testid="rk-account-button"] picture,
+[data-rk] [data-testid="rk-account-button"] [role="img"],
+[data-rk] [data-testid="rk-account-button"] [aria-label*="wallet"],
+[data-rk] [data-testid="rk-account-button"] [aria-label*="Wallet"],
+[data-rk] [data-testid="rk-account-button"] [aria-label*="logo"],
+[data-rk] [data-testid="rk-account-button"] [aria-label*="Logo"],
+[data-rk] [data-testid="rk-account-button"] * img,
+[data-rk] [data-testid="rk-account-button"] * svg,
+[data-rk] [data-testid="rk-account-button"] * picture,
+[data-rk] [data-testid="rk-account-button"] * [role="img"],
+[data-rk] [data-testid="rk-account-button"] * [aria-label*="wallet"],
+[data-rk] [data-testid="rk-account-button"] * [aria-label*="Wallet"],
+[data-rk] [data-testid="rk-account-button"] * [aria-label*="logo"],
+[data-rk] [data-testid="rk-account-button"] * [aria-label*="Logo"],
+[data-rk] [data-testid="rk-profile-button"] img,
+[data-rk] [data-testid="rk-profile-button"] svg,
+[data-rk] [data-testid="rk-profile-button"] picture,
+[data-rk] [data-testid="rk-profile-button"] [role="img"],
+[data-rk] [data-testid="rk-profile-button"] [aria-label*="wallet"],
+[data-rk] [data-testid="rk-profile-button"] [aria-label*="Wallet"],
+[data-rk] [data-testid="rk-profile-button"] [aria-label*="logo"],
+[data-rk] [data-testid="rk-profile-button"] [aria-label*="Logo"],
+[data-rk] [data-testid="rk-profile-button"] * img,
+[data-rk] [data-testid="rk-profile-button"] * svg,
+[data-rk] [data-testid="rk-profile-button"] * picture,
+[data-rk] [data-testid="rk-profile-button"] * [role="img"],
+[data-rk] [data-testid="rk-profile-button"] * [aria-label*="wallet"],
+[data-rk] [data-testid="rk-profile-button"] * [aria-label*="Wallet"],
+[data-rk] [data-testid="rk-profile-button"] * [aria-label*="logo"],
+[data-rk] [data-testid="rk-profile-button"] * [aria-label*="Logo"] {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  width: 0 !important;
+  height: 0 !important;
+  position: absolute !important;
+  left: -9999px !important;
+  top: -9999px !important;
+}
+
+/* Center text in wallet options when icons are hidden */
+[data-rk] [data-testid="rk-wallet-option"] {
+  display: flex !important;
+  justify-content: center !important;
+  align-items: center !important;
+  text-align: center !important;
+  padding: 12px 16px !important;
+}
+
+[data-rk] [data-testid="rk-wallet-option"] > div {
+  display: flex !important;
+  justify-content: center !important;
+  align-items: center !important;
+  width: 100% !important;
+}
+
+/* Ensure text is properly styled when icons are hidden */
+[data-rk] [data-testid="rk-wallet-option"] span,
+[data-rk] [data-testid="rk-wallet-option"] div {
+  font-family: 'Courier New', monospace !important;
+  text-transform: uppercase !important;
+  letter-spacing: 1px !important;
+  font-weight: bold !important;
+  color: #f0f0f0 !important;
+}
+
+/* Style the wallet option text to look more terminal-like */
+[data-rk] [data-testid="rk-wallet-option"] span::before {
+  content: "[ ";
+}
+
+[data-rk] [data-testid="rk-wallet-option"] span::after {
+  content: " ]";
+}
